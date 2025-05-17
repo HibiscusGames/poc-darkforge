@@ -23,8 +23,8 @@ thiserror = "2.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"
-predicates = "3.0"
-proptest = "1.0"
+predicates = "3.1"
+proptest = "1.6"
 
 [profile.dev]
 opt-level = 1  # Better performance while debugging
