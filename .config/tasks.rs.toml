@@ -1,0 +1,71 @@
+["fmt:rustfmt"]
+description = "Format code with rustfmt"
+run = "cargo +nightly fmt --all -- --config-path {{vars.config_dir}}"
+
+["lint:clippy"]
+description = "Lint code with clippy"
+run = "cargo clippy --no-deps --all"
+
+["lint:rustfmt"]
+description = "Lint code with rustfmt"
+run = "cargo +nightly fmt --all --check -- --config-path {{vars.config_dir}}"
+
+["fix:clippy"]
+description = "Fix code with clippy"
+run = "cargo clippy --no-deps --all --fix"
+
+["test:debug"]
+description = "Build the project in debug mode"
+run = "cargo test"
+
+["test:release"]
+description = "Build the project in release mode"
+run = "cargo test --release"
+
+["build:debug"]
+description = "Build the project in debug mode"
+run = "cross build"
+
+["build:release"]
+description = "Build the project in release mode"
+run = "cross build --release"
+
+["build:debug:linux"]
+description = "Build the project in debug mode for Linux"
+depends = ["build:debug:linux:*"]
+
+["build:debug:windows"]
+description = "Build the project in debug mode for Windows"
+depends = ["build:debug:windows:*"]
+
+["build:release:linux"]
+description = "Build the project in release mode for Linux"
+depends = ["build:release:linux:*"]
+
+["build:release:windows"]
+description = "Build the project in release mode for Windows"
+depends = ["build:release:windows:*"]
+
+["build:debug:linux:32bit"]
+description = "Build the project in debug mode for Linux x86_32"
+run = "cross build --target i686-unknown-linux-gnu"
+
+["build:debug:linux:64bit"]
+description = "Build the project in debug mode for Linux x86_64"
+run = "cross build --target x86_64-unknown-linux-gnu"
+
+["build:debug:windows:64bit"]
+description = "Build the project in debug mode for Windows x64"
+run = "cross build --target x86_64-pc-windows-gnu"
+
+["build:release:linux:32bit"]
+description = "Build the project in release mode for Linux x86_32"
+run = "cross build --release --target i686-unknown-linux-gnu"
+
+["build:release:linux:64bit"]
+description = "Build the project in release mode for Linux x86_64"
+run = "cross build --release --target x86_64-unknown-linux-gnu"
+
+["build:release:windows:64bit"]
+description = "Build the project in release mode for Windows x64"
+run = "cross build --release --target x86_64-pc-windows-gnu"

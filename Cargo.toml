@@ -1,0 +1,34 @@
+[package]
+name = "darkforge-poc"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pierre Fouilloux","Hibiscus Games <https://github.com/HibiscusGames>"]
+description = "A proof of concept CLI for testing the mechanics of the Blades in the Dark SRD by One Seven Design."
+license = "AGPL-3.0-or-later"
+readme = "README.md"
+publish = false
+
+[lib]
+name = "darkforge"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dfplay"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+rand = "0.9"
+thiserror = "2.0"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+proptest = "1.0"
+
+[profile.dev]
+opt-level = 1  # Better performance while debugging
+
+[profile.release]
+lto = true
+codegen-units = 1

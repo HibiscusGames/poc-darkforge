@@ -1,0 +1,89 @@
+##### Deny all #####
+*
+
+###### Code ########
+!Cargo.lock
+!Cargo.toml
+!Cross.toml
+!config.toml
+!bacon.toml
+!rust-toolchain.toml
+!*.rs
+!*.jsonc
+
+!.cargo/
+!**/src
+
+!bun.lock
+!tsconfig.json
+!package-lock.json
+
+##### Linters ######
+!.config
+!.linters
+# Commits
+!.czrc
+!commitlint.config.ts
+# Markdown
+!.markdownlint-cli2.jsonc
+# Spelling
+!.cspell.json
+# Rust
+!.clippy.toml
+!.rustfmt.toml
+# JS/TS
+!.prettierignore
+
+## Documentation ###
+!docs
+!docs/**/
+!*.md
+!README.md
+
+##### Branding #####
+!branding/
+
+#### Workspace #####
+!.editorconfig
+!.gitignore
+!.gitattributes
+!.lefthook.yml
+!.mise.toml
+!tasks.*.toml
+!tasks.toml
+!package.json
+
+##### Pipeline #####
+!.github
+!.github/workflows
+# Github Actions
+!CODEOWNERS
+!renovate.yaml
+!renovate.json
+!renovate.config.js
+!rust-lint.yml
+!scorecard.yaml
+
+######## AI ########
+!.windsurfrules
+
+#### Directories ###
+!crates/
+!data/
+!examples/
+
+##### Licenses #####
+!/.attribution
+!/.attribution/**/
+!LICENCE
+!*.txt
+
+#### LFS Assets ####
+!**/*.png
+!**/*.svg
+!**/*.ico
+!**/*.icns
+
+# Explicit Ignores #
+**/node_modules
+**/target

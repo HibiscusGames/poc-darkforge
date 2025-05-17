@@ -1,0 +1,23 @@
+["examples:debug"]
+description = "Build the project in debug mode"
+depends = ["examples:debug:*"]
+
+["examples:release"]
+description = "Build the project in release mode"
+depends = ["examples:release:*"]
+
+["examples:debug:linux"]
+description = "Build the project in debug mode for Linux"
+depends = ["examples:debug:linux:*"]
+
+["examples:debug:windows"]
+description = "Build the project in debug mode for Windows"
+depends = ["examples:debug:windows:*"]
+
+["examples:release:linux"]
+description = "Build the project in release mode for Linux"
+depends = ["examples:release:linux:*"]
+
+["examples:release:windows"]
+description = "Build the project in release mode for Windows"
+depends = ["examples:release:windows:*"]

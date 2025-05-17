@@ -1,0 +1,27 @@
+[*]
+indent_type = tab
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+print_width = 160
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{json,jsonc}]
+indent_style = space
+indent_size = 2
+
+[*.toml]
+indent_size = 2
+
+[*.{js,ts,jsx,tsx,mjs,cjs}]
+semi = false
+single_quote = true
+trailing_comma = none
+bracket_spacing = true
+bracket_same_line = false
+arrow_parens = avoid
+prose_wrap = preserve

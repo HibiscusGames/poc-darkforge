@@ -1,0 +1,8 @@
+edition = "2024"
+style_edition = "2024"
+max_width = 150
+fn_params_layout = "Compressed"
+
+unstable_features = true
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"

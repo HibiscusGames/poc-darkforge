@@ -1,0 +1,37 @@
+# License
+
+Dark Forge, a [Godot Engine](https://godotengine.org/) extension implementing the [Blades in the Dark SRD](https://bladesinthedark.com/),
+Copyright (c) 2025 Hibiscus Games, Pierre Fouilloux
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+See [Full text of the license](./.licenses/AGPLv3.md) for more details.
+
+## Third-party dependencies
+
+**Important Notice**: Only the Dark Forge components and their source code are subject to the GNU Affero General Public License.
+[Godot Engine](https://godotengine.org/), [Blades in the Dark SRD](https://bladesinthedark.com/), [godot-rust](https://godot-rust.github.io/), and other dependencies are subject to their own licenses and this license confers no additional rights to them.
+
+### Forged in the Dark
+
+This work is based on [Blades in the Dark](http://www.bladesinthedark.com/), product of One Seven Design, developed and authored by John Harper, and licensed for our use under the [Creative Commons Attribution 3.0 Unported license](http://creativecommons.org/licenses/by/3.0/).
+
+Blades in the Dark™ is a trademark of One Seven Design. The Forged in the Dark Logo is © One Seven Design, and is used with permission.
+
+### Godot Engine
+
+[Godot Engine](https://godotengine.org/) is free and open source software released under the permissive [MIT license](https://opensource.org/licenses/MIT).
+
+Please visit the [Godot website](https://godotengine.org/license/) for full details and the list of contributors.
+
+### Godot-Rust
+
+Copyright (c) godot-rust; Bromeon and contributors.
+
+The godot-rust source code is subject to the terms of the [Mozilla Public License, v 2.0](https://www.mozilla.org/en-US/MPL/2.0/) as per the [godot-rust license terms](https://github.com/godot-rust/godot-rust/blob/master/LICENSE).
