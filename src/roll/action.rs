@@ -1,3 +1,7 @@
+//! Implementation of action rolls for the dice system.
+//!
+//! Action rolls are used to determine the success or failure of character actions in the game.
+//! This module provides a generic implementation that works with any dice pool and distribution.
 use core::marker::PhantomData;
 
 use rand::distr::{Distribution, Uniform};
@@ -5,10 +9,7 @@ use rand::distr::{Distribution, Uniform};
 use super::{Action, ActionOutcome, Rating};
 use crate::dice::{D6, DicePool, SortOrder};
 
-/// A dice pool for performing action rolls.
-///
-/// This struct wraps a generic dice pool and provides methods for rolling
-/// action dice according to the game rules.
+/// A dice pool for performing action rolls with configurable dice and distribution.
 pub struct ActionDicePool<T: DicePool<D>, D: Distribution<u8>> {
     /// The underlying dice pool used for generating random values.
     pool: T,
@@ -39,17 +40,18 @@ impl Default for ActionDicePool<D6<Uniform<u8>>, Uniform<u8>> {
 }
 
 impl<T: DicePool<D>, D: Distribution<u8>> Action for ActionDicePool<T, D> {
-    /// Rolls dice for an action and evaluates the outcome.
+    /// Rolls dice for an action and returns the outcome.
     ///
     /// # Arguments
-    /// * `n` - The number of dice to roll (pool size)
     ///
-    /// # Returns
-    /// An `ActionOutcome` containing the dice results and rating
+    /// * `n` - The number of dice to roll, representing the character's rating in the action.
     ///
-    /// # Special cases
-    /// If `n` is 0 (zero dice pool), rolls 2 dice and uses only the lowest die for rating.
-    /// Otherwise, rolls `n` dice and uses the highest 1-2 dice for rating.
+    /// # Behaviour
+    ///
+    /// - If `n` is 0 (zero dice pool): Rolls 2 dice sorted in ascending order and uses only the lowest die for rating evaluation.
+    /// - If `n` is greater than 0: Rolls `n` dice sorted in descending order and uses all dice for rating evaluation.
+    ///
+    /// This implements the core "Blades in the Dark" dice mechanics where rolling more dice increases your chances of success.
     fn roll(&self, n: u8) -> ActionOutcome {
         if n == 0 {
             let rolled = self.pool.roll(2, SortOrder::Ascending);

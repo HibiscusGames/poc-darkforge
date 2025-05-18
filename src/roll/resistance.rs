@@ -1,3 +1,12 @@
+//! Resistance roll mechanics for Blades in the Dark.
+//!
+//! This module implements dice pools and outcomes for resistance rolls,
+//! which determine the stress cost when a character resists consequences.
+//!
+//! In Blades in the Dark, resistance rolls use a character's attribute rating
+//! to determine the number of dice rolled. A rating of 0 results in rolling
+//! 2 dice and taking the lowest, while higher ratings roll that many dice
+//! and take the highest result.
 use core::marker::PhantomData;
 
 use rand::distr::{Distribution, Uniform};
@@ -53,10 +62,7 @@ impl<T: DicePool<D>, D: Distribution<u8>> Resistance for ResistanceDicePool<T, D
     fn roll(&self, n: u8) -> ResistanceOutcome {
         if n == 0 {
             let rolled = self.pool.roll(2, SortOrder::Ascending);
-            let lowest = rolled
-                .first()
-                .cloned()
-                .expect("rolled must not be empty, this should not be possible with correct code");
+            let lowest = rolled.first().cloned().expect("dice pool must return at least one die");
             let rating = Rating::evaluate(vec![lowest]);
 
             ResistanceOutcome {
@@ -66,38 +72,35 @@ impl<T: DicePool<D>, D: Distribution<u8>> Resistance for ResistanceDicePool<T, D
             }
         } else {
             let rolled = self.pool.roll(n, SortOrder::Descending);
-            let highest = rolled
-                .first()
-                .cloned()
-                .expect("rolled must not be empty, this should not be possible with correct code");
+            let highest = rolled.first().cloned().expect("dice pool must return at least one die");
             let rating = Rating::evaluate(rolled.clone());
 
             ResistanceOutcome {
                 dice: rolled,
-                rating: rating.clone(),
-                stress: calculate_stress(rating, highest),
+                stress: calculate_stress(rating.clone(), highest),
+                rating,
             }
         }
     }
 }
 
-/// Calculates the stress cost of a resistance roll based on the rating and die value.
+/// Calculates the stress cost based on the roll rating and die value.
 ///
-/// # Arguments
-/// * `rating` - The outcome rating of the resistance roll
-/// * `val` - The die value used for stress calculation (highest die for normal pools, lowest for zero pools)
+/// # Parameters
+/// * `rating` - The rating of the roll
+/// * `val` - The die value to use for stress calculation
 ///
 /// # Returns
-/// The stress cost as a signed integer:
-/// * -1 for Critical successes (stress reduction)
-/// * 0-5 for other outcomes, depending on the die value (6 → 0, 5 → 1, etc.)
+/// The stress cost as an i8:
+/// - For Critical ratings: returns a fixed value of -1 (stress reduction)
+/// - For other ratings: returns the base cost (6) minus the die value
 fn calculate_stress(rating: Rating, val: u8) -> i8 {
-    if rating == Rating::Critical {
-        return -1;
-    }
-
     const BASE_STRESS_COST: i8 = 6;
+    const CRITICAL_STRESS_REDUCTION: i8 = -1;
 
+    if rating == Rating::Critical {
+        return CRITICAL_STRESS_REDUCTION;
+    }
     BASE_STRESS_COST - val as i8
 }
 
@@ -146,15 +149,17 @@ mod tests {
         fn test_stress_calculation_follows_rules(pool_size in 1u8..=255_u8) {
             let outcome = ResistanceDicePool::default().roll(pool_size);
             let die_value = outcome.dice().first().cloned().expect("dice must not be empty");
-            let expected_stress = if outcome.rating() == Rating::Critical { -1 } else { match die_value {
-                6 => 0,
-                5 => 1,
-                4 => 2,
-                3 => 3,
-                2 => 4,
-                _ => 5,
-            }};
-
+            let expected_stress = match outcome.rating() {
+                Rating::Critical => -1,
+                _ => match die_value {
+                    6 => 0,
+                    5 => 1,
+                    4 => 2,
+                    3 => 3,
+                    2 => 4,
+                    _ => 5,
+                },
+            };
             prop_assert_eq!(outcome.stress(), expected_stress);
         }
     }
@@ -169,10 +174,7 @@ mod tests {
     #[case::failure_with_one(vec![1, 1], Rating::Failure, 5)]
     fn test_resistance_roll_evaluates_to_correct_rating_and_stress(#[case] dice: Vec<u8>, #[case] rating: Rating, #[case] stress: i8) {
         let mut expected_dice = dice.clone();
-
-        if dice.len() > 0 {
-            expected_dice.sort_unstable_by(|a, b| b.cmp(a));
-        }
+        expected_dice.sort_unstable_by(|a, b| b.cmp(a));
 
         assert_eq!(
             ResistanceDicePool::new(StubDicePool::new(dice)).roll(expected_dice.len() as u8),
