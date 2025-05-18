@@ -1,13 +1,31 @@
 use rand::distr::{Distribution, StandardUniform, Uniform};
 
+/// Defines the order in which dice rolls should be sorted.
+///
+/// Used when rolling multiple dice to determine the order of results.
 pub enum SortOrder {
+    /// Sort dice values from lowest to highest.
     Ascending,
+    /// Sort dice values from highest to lowest.
     Descending,
 }
 
+/// A trait for dice pools that can generate random rolls based on a specific distribution.
+///
+/// Implementations of this trait can represent different types of dice with varying
+/// numbers of sides and probability distributions.
 pub trait DicePool<D: Distribution<u8> = StandardUniform> {
+    /// Returns a reference to the underlying distribution used for generating random values.
     fn distribution(&self) -> &D;
 
+    /// Rolls a specified number of dice and returns the results sorted according to the given order.
+    ///
+    /// # Arguments
+    /// * `n` - The number of dice to roll (between 1 and 255)
+    /// * `sort_order` - The order in which to sort the dice results
+    ///
+    /// # Returns
+    /// A vector of dice values sorted according to the specified order
     fn roll(&self, n: u8, sort_order: SortOrder) -> Vec<u8> {
         let mut rolls: Vec<u8> = self.distribution().sample_iter(&mut rand::rng()).take(n as usize).collect();
 
@@ -17,17 +35,31 @@ pub trait DicePool<D: Distribution<u8> = StandardUniform> {
     }
 }
 
+/// A convenience type alias for a standard six-sided die (d6).
+///
+/// Uses a uniform distribution by default, with values from 1 to 6.
 pub type D6<D = Uniform<u8>> = DN<6, D>;
 
+/// A generic dice type with a configurable number of sides and distribution.
+///
+/// The type parameter `SIDES` determines the maximum value of the die.
+/// The type parameter `D` determines the probability distribution used for rolls.
 pub struct DN<const SIDES: u8, D: Distribution<u8> = Uniform<u8>>(D);
 
 impl<const SIDES: u8> Default for DN<SIDES> {
+    /// Creates a default dice with `SIDES` sides using a uniform distribution.
+    ///
+    /// The distribution ranges from 1 to `SIDES` inclusive.
     fn default() -> Self {
         Self::new(Uniform::new_inclusive(1, SIDES).expect("Invalid range"))
     }
 }
 
 impl<const SIDES: u8, D: Distribution<u8>> DN<SIDES, D> {
+    /// Creates a new dice with the specified distribution.
+    ///
+    /// # Arguments
+    /// * `distribution` - The probability distribution to use for generating dice values
     pub fn new(distribution: D) -> Self {
         Self(distribution)
     }
@@ -47,6 +79,10 @@ impl<const SIDES: u8, D: Distribution<u8>> DicePool<D> for DN<SIDES, D> {
 }
 
 impl SortOrder {
+    /// Sorts a slice of dice rolls according to the specified order.
+    ///
+    /// # Arguments
+    /// * `rolls` - A mutable slice of dice roll values to be sorted in place
     fn sort(&self, rolls: &mut [u8]) {
         match self {
             SortOrder::Ascending => rolls.sort_unstable(),

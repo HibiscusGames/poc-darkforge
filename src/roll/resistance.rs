@@ -5,18 +5,31 @@ use rand::distr::{Distribution, Uniform};
 use super::{Rating, Resistance, ResistanceOutcome};
 use crate::dice::{D6, DicePool, SortOrder};
 
+/// A dice pool for performing resistance rolls.
+///
+/// This struct wraps a generic dice pool and provides methods for rolling
+/// resistance dice according to the game rules.
 pub struct ResistanceDicePool<T: DicePool<D>, D: Distribution<u8>> {
+    /// The underlying dice pool used for generating random values.
     pool: T,
+    /// Phantom data to track the distribution type parameter.
     _phantom: PhantomData<D>,
 }
 
 impl<T: DicePool<D>, D: Distribution<u8>> ResistanceDicePool<T, D> {
+    /// Creates a new resistance dice pool with the specified underlying dice pool.
+    ///
+    /// # Arguments
+    /// * `pool` - The dice pool to use for generating random values
     pub fn new(pool: T) -> Self {
         Self { pool, _phantom: PhantomData }
     }
 }
 
 impl Default for ResistanceDicePool<D6<Uniform<u8>>, Uniform<u8>> {
+    /// Creates a default resistance dice pool using standard six-sided dice.
+    ///
+    /// This uses a uniform distribution for values from 1 to 6.
     fn default() -> Self {
         Self {
             pool: D6::default(),
@@ -26,6 +39,17 @@ impl Default for ResistanceDicePool<D6<Uniform<u8>>, Uniform<u8>> {
 }
 
 impl<T: DicePool<D>, D: Distribution<u8>> Resistance for ResistanceDicePool<T, D> {
+    /// Rolls dice for a resistance check and evaluates the outcome including stress cost.
+    ///
+    /// # Arguments
+    /// * `n` - The number of dice to roll (pool size)
+    ///
+    /// # Returns
+    /// A `ResistanceOutcome` containing the dice results, rating, and stress cost
+    ///
+    /// # Special cases
+    /// If `n` is 0 (zero dice pool), rolls 2 dice and uses only the lowest die for rating and stress.
+    /// Otherwise, rolls `n` dice and uses the highest 1-2 dice for rating and the highest die for stress.
     fn roll(&self, n: u8) -> ResistanceOutcome {
         if n == 0 {
             let rolled = self.pool.roll(2, SortOrder::Ascending);
@@ -57,6 +81,16 @@ impl<T: DicePool<D>, D: Distribution<u8>> Resistance for ResistanceDicePool<T, D
     }
 }
 
+/// Calculates the stress cost of a resistance roll based on the rating and die value.
+///
+/// # Arguments
+/// * `rating` - The outcome rating of the resistance roll
+/// * `val` - The die value used for stress calculation (highest die for normal pools, lowest for zero pools)
+///
+/// # Returns
+/// The stress cost as a signed integer:
+/// * -1 for Critical successes (stress reduction)
+/// * 0-5 for other outcomes, depending on the die value (6 → 0, 5 → 1, etc.)
 fn calculate_stress(rating: Rating, val: u8) -> i8 {
     if rating == Rating::Critical {
         return -1;
