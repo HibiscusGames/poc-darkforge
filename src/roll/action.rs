@@ -2,16 +2,8 @@ use core::marker::PhantomData;
 
 use rand::distr::{Distribution, Uniform};
 
-use super::{Action, ActionOutcome};
+use super::{Action, ActionOutcome, Rating};
 use crate::dice::{D6, DicePool, SortOrder};
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Rating {
-    Critical,
-    Success,
-    Partial,
-    Failure,
-}
 
 pub struct ActionDicePool<T: DicePool<D>, D: Distribution<u8>> {
     pool: T,
@@ -47,19 +39,6 @@ impl<T: DicePool<D>, D: Distribution<u8>> Action for ActionDicePool<T, D> {
                 dice: rolled.clone(),
                 rating: Rating::evaluate(rolled),
             }
-        }
-    }
-}
-
-impl Rating {
-    fn evaluate(rolled: impl IntoIterator<Item = u8>) -> Self {
-        let mut rolled = rolled.into_iter().take(2);
-
-        match (rolled.next(), rolled.next()) {
-            (Some(6), Some(6)) => Rating::Critical,
-            (Some(6), _) => Rating::Success,
-            (Some(4) | Some(5), _) => Rating::Partial,
-            _ => Rating::Failure,
         }
     }
 }
