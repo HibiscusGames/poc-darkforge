@@ -1,19 +1,49 @@
-use rand::distr::{Distribution, Uniform};
+use rand::distr::{Distribution, StandardUniform, Uniform};
 
 pub enum SortOrder {
     Ascending,
     Descending,
 }
 
-pub fn roll_d6(n: u8, sort_order: SortOrder) -> Vec<u8> {
-    let mut rolls: Vec<u8> = Uniform::new_inclusive(1, 6)
-        .unwrap()
-        .sample_iter(&mut rand::rng())
-        .take(n as usize)
-        .collect();
-    sort_order.sort(&mut rolls);
+pub trait DicePool<D: Distribution<u8> = StandardUniform> {
+    fn distribution(&self) -> &D;
 
-    rolls
+    fn roll(&self, n: u8, sort_order: SortOrder) -> Vec<u8> {
+        let mut rolls: Vec<u8> = self.distribution().sample_iter(&mut rand::rng()).take(n as usize).collect();
+
+        sort_order.sort(&mut rolls);
+
+        rolls
+    }
+}
+
+pub type D6<D = Uniform<u8>> = DN<6, D>;
+
+pub struct DN<const SIDES: u8, D: Distribution<u8> = Uniform<u8>>(D);
+
+impl<const SIDES: u8> Default for DN<SIDES> {
+    fn default() -> Self {
+        Self::new(Uniform::new_inclusive(1, SIDES).expect("Invalid range"))
+    }
+}
+
+impl<const SIDES: u8, D: Distribution<u8>> DN<SIDES, D> {
+    pub fn new(distribution: D) -> Self {
+        Self(distribution)
+    }
+}
+
+impl<const SIDES: u8, D: Distribution<u8>> DicePool<D> for DN<SIDES, D> {
+    fn distribution(&self) -> &D {
+        &self.0
+    }
+
+    fn roll(&self, n: u8, sort_order: SortOrder) -> Vec<u8> {
+        let mut rolls: Vec<u8> = self.distribution().sample_iter(&mut rand::rng()).take(n as usize).collect();
+        sort_order.sort(&mut rolls);
+
+        rolls
+    }
 }
 
 impl SortOrder {
@@ -34,25 +64,25 @@ mod tests {
     proptest! {
         #[test]
         fn test_returns_correct_number_of_dice(count in 1u8..=255) {
-            let result = roll_d6(count, SortOrder::Ascending);
+            let result = D6::default().roll(count, SortOrder::Ascending);
             prop_assert_eq!(result.len(), count as usize, "should return correct number of dice");
         }
 
         #[test]
         fn test_dice_values_are_within_range(count in 1u8..=255) {
-            let result = roll_d6(count, SortOrder::Ascending);
+            let result = D6::default().roll(count, SortOrder::Ascending);
             prop_assert!(result.iter().all(|&d| (1..=6).contains(&d)), "should be within range 1-6");
         }
 
         #[test]
         fn test_dice_are_sorted_descending(count in 1u8..=255) {
-            let result = roll_d6(count, SortOrder::Descending);
+            let result = D6::default().roll(count, SortOrder::Descending);
             prop_assert!(result.windows(2).all(|w| w[0] >= w[1]), "should be sorted descending");
         }
 
         #[test]
         fn test_dice_are_sorted_ascending(count in 1u8..=255) {
-            let result = roll_d6(count, SortOrder::Ascending);
+            let result = D6::default().roll(count, SortOrder::Ascending);
             prop_assert!(result.windows(2).all(|w| w[0] <= w[1]), "should be sorted ascending");
         }
     }
