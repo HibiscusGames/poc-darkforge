@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use rand::distr::{Distribution, Uniform};
 
+use super::{Action, ActionOutcome};
 use crate::dice::{D6, DicePool, SortOrder};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -10,26 +11,6 @@ pub enum Rating {
     Success,
     Partial,
     Failure,
-}
-
-pub trait Roll {
-    fn roll(&self, n: u8) -> Outcome;
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Outcome {
-    dice: Vec<u8>,
-    rating: Rating,
-}
-
-impl Outcome {
-    pub fn rating(&self) -> Rating {
-        self.rating.clone()
-    }
-
-    pub fn dice(&self) -> Vec<u8> {
-        self.dice.clone()
-    }
 }
 
 pub struct ActionDicePool<T: DicePool<D>, D: Distribution<u8>> {
@@ -52,17 +33,17 @@ impl Default for ActionDicePool<D6<Uniform<u8>>, Uniform<u8>> {
     }
 }
 
-impl<T: DicePool<D>, D: Distribution<u8>> Roll for ActionDicePool<T, D> {
-    fn roll(&self, n: u8) -> Outcome {
+impl<T: DicePool<D>, D: Distribution<u8>> Action for ActionDicePool<T, D> {
+    fn roll(&self, n: u8) -> ActionOutcome {
         if n == 0 {
             let rolled = self.pool.roll(2, SortOrder::Ascending);
-            Outcome {
+            ActionOutcome {
                 dice: rolled.clone(),
                 rating: Rating::evaluate(vec![rolled[0]]),
             }
         } else {
             let rolled = self.pool.roll(n, SortOrder::Descending);
-            Outcome {
+            ActionOutcome {
                 dice: rolled.clone(),
                 rating: Rating::evaluate(rolled),
             }
@@ -139,7 +120,7 @@ mod tests {
 
         assert_eq!(
             ActionDicePool::new(StubDicePool::new(dice.clone())).roll(2),
-            Outcome { dice: expect_dice, rating }
+            ActionOutcome { dice: expect_dice, rating }
         );
     }
 
@@ -156,7 +137,7 @@ mod tests {
 
         assert_eq!(
             ActionDicePool::new(StubDicePool::new(dice.clone())).roll(0),
-            Outcome { dice: expect_dice, rating }
+            ActionOutcome { dice: expect_dice, rating }
         );
     }
 
