@@ -29,7 +29,10 @@ impl<T: DicePool<D>, D: Distribution<u8>> Resistance for ResistanceDicePool<T, D
     fn roll(&self, n: u8) -> ResistanceOutcome {
         if n == 0 {
             let rolled = self.pool.roll(2, SortOrder::Ascending);
-            let lowest = rolled.first().cloned().unwrap_or(0);
+            let lowest = rolled
+                .first()
+                .cloned()
+                .expect("rolled must not be empty, this should not be possible with correct code");
             let rating = Rating::evaluate(vec![lowest]);
 
             ResistanceOutcome {
@@ -39,7 +42,10 @@ impl<T: DicePool<D>, D: Distribution<u8>> Resistance for ResistanceDicePool<T, D
             }
         } else {
             let rolled = self.pool.roll(n, SortOrder::Descending);
-            let highest = rolled.first().cloned().unwrap_or(0);
+            let highest = rolled
+                .first()
+                .cloned()
+                .expect("rolled must not be empty, this should not be possible with correct code");
             let rating = Rating::evaluate(rolled.clone());
 
             ResistanceOutcome {

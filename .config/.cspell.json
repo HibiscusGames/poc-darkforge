@@ -154,7 +154,6 @@
     "reqwest",
     "rlib",
     "rngs",
-    "rsest",
     "rstest",
     "Runewright",
     "runme",

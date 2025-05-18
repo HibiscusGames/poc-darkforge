@@ -31,7 +31,12 @@ impl<T: DicePool<D>, D: Distribution<u8>> Action for ActionDicePool<T, D> {
             let rolled = self.pool.roll(2, SortOrder::Ascending);
             ActionOutcome {
                 dice: rolled.clone(),
-                rating: Rating::evaluate(vec![rolled[0]]),
+                rating: Rating::evaluate(vec![
+                    rolled
+                        .first()
+                        .cloned()
+                        .expect("rolled must not be empty, this should not be possible with correct code"),
+                ]),
             }
         } else {
             let rolled = self.pool.roll(n, SortOrder::Descending);
@@ -95,7 +100,7 @@ mod tests {
     #[case::return_failure_when_one_and_one(vec![1, 1], Rating::Failure)]
     fn test_action_roll_evaluates_to_correct_rating(#[case] dice: Vec<u8>, #[case] rating: Rating) {
         let mut expect_dice = dice.clone();
-        expect_dice.sort_unstable_by(|a, b| b.cmp(a));
+        expect_dice.reverse();
 
         assert_eq!(
             ActionDicePool::new(StubDicePool::new(dice.clone())).roll(2),
@@ -112,7 +117,7 @@ mod tests {
     #[case::return_failure_when_six_and_one(vec![6, 1], Rating::Failure)]
     fn test_zero_pool_action_roll_evaluates_to_correct_rating(#[case] dice: Vec<u8>, #[case] rating: Rating) {
         let mut expect_dice = dice.clone();
-        expect_dice.sort_unstable();
+        expect_dice.reverse();
 
         assert_eq!(
             ActionDicePool::new(StubDicePool::new(dice.clone())).roll(0),
