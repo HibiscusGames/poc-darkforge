@@ -40,9 +40,6 @@
 !*.md
 !README.md
 
-##### Branding #####
-!branding/
-
 #### Workspace #####
 !.editorconfig
 !.gitignore
@@ -68,7 +65,7 @@
 !.windsurfrules
 
 #### Directories ###
-!crates/
+!src/roll
 !data/
 !examples/
 
