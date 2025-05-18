@@ -5,18 +5,31 @@ use rand::distr::{Distribution, Uniform};
 use super::{Action, ActionOutcome, Rating};
 use crate::dice::{D6, DicePool, SortOrder};
 
+/// A dice pool for performing action rolls.
+///
+/// This struct wraps a generic dice pool and provides methods for rolling
+/// action dice according to the game rules.
 pub struct ActionDicePool<T: DicePool<D>, D: Distribution<u8>> {
+    /// The underlying dice pool used for generating random values.
     pool: T,
+    /// Phantom data to track the distribution type parameter.
     _phantom: PhantomData<D>,
 }
 
 impl<T: DicePool<D>, D: Distribution<u8>> ActionDicePool<T, D> {
+    /// Creates a new action dice pool with the specified underlying dice pool.
+    ///
+    /// # Arguments
+    /// * `pool` - The dice pool to use for generating random values
     pub fn new(pool: T) -> Self {
         Self { pool, _phantom: PhantomData }
     }
 }
 
 impl Default for ActionDicePool<D6<Uniform<u8>>, Uniform<u8>> {
+    /// Creates a default action dice pool using standard six-sided dice.
+    ///
+    /// This uses a uniform distribution for values from 1 to 6.
     fn default() -> Self {
         Self {
             pool: D6::default(),
@@ -26,6 +39,17 @@ impl Default for ActionDicePool<D6<Uniform<u8>>, Uniform<u8>> {
 }
 
 impl<T: DicePool<D>, D: Distribution<u8>> Action for ActionDicePool<T, D> {
+    /// Rolls dice for an action and evaluates the outcome.
+    ///
+    /// # Arguments
+    /// * `n` - The number of dice to roll (pool size)
+    ///
+    /// # Returns
+    /// An `ActionOutcome` containing the dice results and rating
+    ///
+    /// # Special cases
+    /// If `n` is 0 (zero dice pool), rolls 2 dice and uses only the lowest die for rating.
+    /// Otherwise, rolls `n` dice and uses the highest 1-2 dice for rating.
     fn roll(&self, n: u8) -> ActionOutcome {
         if n == 0 {
             let rolled = self.pool.roll(2, SortOrder::Ascending);
@@ -92,7 +116,7 @@ mod tests {
 
     #[rstest]
     #[case::return_critical_when_six_and_six(vec![6, 6], Rating::Critical)]
-    #[case::return_success_when_six_and_five(vec![6, 5], Rating::Success)]
+    #[case::return_success_when_six_and_five(vec![5, 6], Rating::Success)]
     #[case::return_partial_when_one_and_five(vec![1, 5], Rating::Partial)]
     #[case::return_partial_when_one_and_four(vec![1, 4], Rating::Partial)]
     #[case::return_failure_when_one_and_three(vec![1, 3], Rating::Failure)]
