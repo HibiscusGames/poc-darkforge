@@ -24,6 +24,16 @@ impl Effect {
             Effect::Extreme => Effect::Extreme,
         }
     }
+
+    pub fn decrease(&self) -> Self {
+        match self {
+            Effect::Extreme => Effect::Great,
+            Effect::Great => Effect::Standard,
+            Effect::Standard => Effect::Limited,
+            Effect::Limited => Effect::Zero,
+            Effect::Zero => Effect::Zero,
+        }
+    }
 }
 
 impl Position {
@@ -67,12 +77,22 @@ mod tests {
     }
 
     #[rstest]
-    #[case::from_none_to_limited(Effect::Zero, Effect::Limited)]
+    #[case::from_zero_to_limited(Effect::Zero, Effect::Limited)]
     #[case::from_limited_to_standard(Effect::Limited, Effect::Standard)]
     #[case::from_standard_to_great(Effect::Standard, Effect::Great)]
     #[case::from_great_to_extreme(Effect::Great, Effect::Extreme)]
     #[case::from_extreme_to_extreme(Effect::Extreme, Effect::Extreme)]
     fn test_effect_increases(#[case] from: Effect, #[case] to: Effect) {
         assert_eq!(from.increase(), to);
+    }
+
+    #[rstest]
+    #[case::from_extreme_to_great(Effect::Extreme, Effect::Great)]
+    #[case::from_great_to_standard(Effect::Great, Effect::Standard)]
+    #[case::from_standard_to_limited(Effect::Standard, Effect::Limited)]
+    #[case::from_limited_to_none(Effect::Limited, Effect::Zero)]
+    #[case::from_zero_to_zero(Effect::Zero, Effect::Zero)]
+    fn test_effect_decreases(#[case] from: Effect, #[case] to: Effect) {
+        assert_eq!(from.decrease(), to);
     }
 }
