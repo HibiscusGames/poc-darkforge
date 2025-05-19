@@ -65,6 +65,7 @@
 !.windsurfrules
 
 #### Directories ###
+!src/action
 !src/roll
 !data/
 !examples/
