@@ -5,7 +5,7 @@ pub enum Position {
     Controlled,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Effect {
     Zero,
     Limited,
@@ -34,6 +34,10 @@ impl Effect {
             Effect::Zero => Effect::Zero,
         }
     }
+
+    pub fn min(self, value: &Self) -> Self {
+        if self < *value { value.clone() } else { self }
+    }
 }
 
 impl Position {
@@ -56,6 +60,7 @@ impl Position {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
     use rstest::rstest;
 
     use super::*;
@@ -94,5 +99,34 @@ mod tests {
     #[case::from_zero_to_zero(Effect::Zero, Effect::Zero)]
     fn test_effect_decreases(#[case] from: Effect, #[case] to: Effect) {
         assert_eq!(from.decrease(), to);
+    }
+
+    proptest! {
+        #[test]
+        fn test_min_prevents_decrease_below_minimum(
+            effect in prop_oneof![
+                Just(Effect::Zero),
+                Just(Effect::Limited),
+                Just(Effect::Standard),
+                Just(Effect::Great),
+                Just(Effect::Extreme)
+            ],
+            clamp in prop_oneof![
+                Just(Effect::Zero),
+                Just(Effect::Limited),
+                Just(Effect::Standard),
+                Just(Effect::Great),
+                Just(Effect::Extreme)
+            ]
+        ) {
+            let decreased = effect.decrease();
+            if effect != Effect::Zero {
+                prop_assert!(decreased < effect, "Decreased effect {:?} should be less than original effect {:?}", decreased, effect)
+            }
+
+            let clamped = decreased.min(&clamp);
+            prop_assert!(clamped >= clamp,
+                "Clamped effect {:?} should not be less than clamp value {:?}", clamped, clamp);
+        }
     }
 }
