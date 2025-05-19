@@ -38,6 +38,10 @@ impl Effect {
     pub fn min(self, value: &Self) -> Self {
         if self < *value { value.clone() } else { self }
     }
+
+    pub fn max(self, value: &Self) -> Self {
+        if self > *value { value.clone() } else { self }
+    }
 }
 
 impl Position {
@@ -127,6 +131,33 @@ mod tests {
             let clamped = decreased.min(&clamp);
             prop_assert!(clamped >= clamp,
                 "Clamped effect {:?} should not be less than clamp value {:?}", clamped, clamp);
+        }
+
+        #[test]
+        fn test_min_prevents_increase_above_maximum(
+            effect in prop_oneof![
+                Just(Effect::Zero),
+                Just(Effect::Limited),
+                Just(Effect::Standard),
+                Just(Effect::Great),
+                Just(Effect::Extreme)
+            ],
+            clamp in prop_oneof![
+                Just(Effect::Zero),
+                Just(Effect::Limited),
+                Just(Effect::Standard),
+                Just(Effect::Great),
+                Just(Effect::Extreme)
+            ]
+        ) {
+            let increased = effect.increase();
+            if effect != Effect::Extreme {
+                prop_assert!(increased > effect, "Increased effect {:?} should be greater than original effect {:?}", increased, effect)
+            }
+
+            let clamped = increased.max(&clamp);
+            prop_assert!(clamped <= clamp,
+                "Clamped effect {:?} should not be greater than clamp value {:?}", clamped, clamp);
         }
     }
 }
