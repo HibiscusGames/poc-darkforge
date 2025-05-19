@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Position {
     Desperate,
     Risky,
@@ -35,12 +35,12 @@ impl Effect {
         }
     }
 
-    pub fn at_least(self, value: &Self) -> Self {
-        if self < *value { self } else { value.clone() }
+    pub fn at_least(self, value: Self) -> Self {
+        if self < value { value } else { self }
     }
 
-    pub fn at_most(self, value: &Self) -> Self {
-        if self > *value { self } else { value.clone() }
+    pub fn at_most(self, value: Self) -> Self {
+        if self > value { value } else { self }
     }
 }
 
@@ -105,59 +105,53 @@ mod tests {
         assert_eq!(from.decrease(), to);
     }
 
+    #[rstest]
+    #[case::from_zero_to_zero(Effect::Zero, Effect::Zero, Effect::Zero)]
+    #[case::from_limited_to_limited(Effect::Limited, Effect::Limited, Effect::Limited)]
+    #[case::from_standard_to_standard(Effect::Standard, Effect::Standard, Effect::Standard)]
+    #[case::from_great_to_great(Effect::Great, Effect::Great, Effect::Great)]
+    #[case::from_extreme_to_extreme(Effect::Extreme, Effect::Extreme, Effect::Extreme)]
+    fn test_at_least_edge_cases(#[case] from: Effect, #[case] clamp: Effect, #[case] to: Effect) {
+        assert_eq!(from.at_least(clamp), to);
+    }
+
+    #[rstest]
+    #[case::from_zero_to_zero(Effect::Zero, Effect::Zero, Effect::Zero)]
+    #[case::from_limited_to_limited(Effect::Limited, Effect::Limited, Effect::Limited)]
+    #[case::from_standard_to_standard(Effect::Standard, Effect::Standard, Effect::Standard)]
+    #[case::from_great_to_great(Effect::Great, Effect::Great, Effect::Great)]
+    #[case::from_extreme_to_extreme(Effect::Extreme, Effect::Extreme, Effect::Extreme)]
+    fn test_at_most_edge_cases(#[case] from: Effect, #[case] clamp: Effect, #[case] to: Effect) {
+        assert_eq!(from.at_most(clamp), to);
+    }
+
     proptest! {
         #[test]
         fn test_min_prevents_decrease_below_minimum(
-            effect in prop_oneof![
-                Just(Effect::Zero),
-                Just(Effect::Limited),
-                Just(Effect::Standard),
-                Just(Effect::Great),
-                Just(Effect::Extreme)
-            ],
-            clamp in prop_oneof![
-                Just(Effect::Zero),
-                Just(Effect::Limited),
-                Just(Effect::Standard),
-                Just(Effect::Great),
-                Just(Effect::Extreme)
-            ]
+            effect in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)],
+            clamp in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)]
         ) {
             let decreased = effect.decrease();
             if effect != Effect::Zero {
                 prop_assert!(decreased < effect, "Decreased effect {:?} should be less than original effect {:?}", decreased, effect)
             }
 
-            let clamped = decreased.min(&clamp);
-            prop_assert!(clamped >= clamp,
-                "Clamped effect {:?} should not be less than clamp value {:?}", clamped, clamp);
+            let clamped = decreased.at_least(clamp.clone());
+            prop_assert!(clamped >= clamp, "Clamped effect {:?} should not be less than clamp value {:?}", clamped, clamp);
         }
 
         #[test]
         fn test_min_prevents_increase_above_maximum(
-            effect in prop_oneof![
-                Just(Effect::Zero),
-                Just(Effect::Limited),
-                Just(Effect::Standard),
-                Just(Effect::Great),
-                Just(Effect::Extreme)
-            ],
-            clamp in prop_oneof![
-                Just(Effect::Zero),
-                Just(Effect::Limited),
-                Just(Effect::Standard),
-                Just(Effect::Great),
-                Just(Effect::Extreme)
-            ]
+            effect in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)],
+            clamp in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)]
         ) {
             let increased = effect.increase();
             if effect != Effect::Extreme {
                 prop_assert!(increased > effect, "Increased effect {:?} should be greater than original effect {:?}", increased, effect)
             }
 
-            let clamped = increased.max(&clamp);
-            prop_assert!(clamped <= clamp,
-                "Clamped effect {:?} should not be greater than clamp value {:?}", clamped, clamp);
+            let clamped = increased.at_most(clamp.clone());
+            prop_assert!(clamped <= clamp, "Clamped effect {:?} should not be greater than clamp value {:?}", clamped, clamp);
         }
     }
 }
