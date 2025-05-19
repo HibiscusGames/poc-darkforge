@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Position {
     Desperate,
     Risky,
@@ -35,12 +35,12 @@ impl Effect {
         }
     }
 
-    pub fn min(self, value: &Self) -> Self {
-        if self < *value { value.clone() } else { self }
+    pub fn at_least(self, value: &Self) -> Self {
+        if self < *value { self } else { value.clone() }
     }
 
-    pub fn max(self, value: &Self) -> Self {
-        if self > *value { value.clone() } else { self }
+    pub fn at_most(self, value: &Self) -> Self {
+        if self > *value { self } else { value.clone() }
     }
 }
 
