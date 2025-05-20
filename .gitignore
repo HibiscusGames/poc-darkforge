@@ -63,8 +63,11 @@
 
 ######## AI ########
 !.windsurfrules
+!.windsurf/
+!.windsurf/workflows/
 
 #### Directories ###
+!src/action
 !src/roll
 !data/
 !examples/
