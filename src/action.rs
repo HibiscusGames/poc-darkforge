@@ -60,6 +60,10 @@ impl Position {
             Position::Desperate => Position::Desperate,
         }
     }
+
+    pub fn trade_for_effect(&self, effect: Effect) -> (Self, Effect) {
+        (self.diminish(), effect.increase())
+    }
 }
 
 #[cfg(test)]
@@ -123,6 +127,18 @@ mod tests {
     #[case::from_extreme_to_extreme(Effect::Extreme, Effect::Extreme, Effect::Extreme)]
     fn test_at_most_edge_cases(#[case] from: Effect, #[case] clamp: Effect, #[case] to: Effect) {
         assert_eq!(from.at_most(clamp), to);
+    }
+
+    #[rstest]
+    #[case::controlled_to_risky_for_effect(Position::Controlled, Effect::Limited, Position::Risky, Effect::Standard)]
+    #[case::risky_to_desperate_for_effect(Position::Risky, Effect::Limited, Position::Desperate, Effect::Standard)]
+    #[case::controlled_to_risky_for_great_effect(Position::Controlled, Effect::Standard, Position::Risky, Effect::Great)]
+    fn test_trade_position_for_effect(
+        #[case] initial_position: Position, #[case] initial_effect: Effect, #[case] expected_position: Position, #[case] expected_effect: Effect,
+    ) {
+        let (new_position, new_effect) = initial_position.trade_for_effect(initial_effect);
+        assert_eq!(new_position, expected_position);
+        assert_eq!(new_effect, expected_effect);
     }
 
     proptest! {

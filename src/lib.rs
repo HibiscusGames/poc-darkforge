@@ -4,8 +4,6 @@ use std::error::Error;
 pub mod action;
 /// Provides generic dice rolling functionality with support for different distributions and sorting orders.
 pub mod dice;
-/// Implements clock mechanics for the game.
-pub mod progress;
 /// Implements roll mechanics for actions and resistances, including outcome evaluation.
 pub mod roll;
 
