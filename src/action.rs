@@ -1,13 +1,13 @@
 use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub enum Position {
     Desperate,
     Risky,
     Controlled,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub enum Effect {
     Zero,
     Limited,
@@ -20,8 +20,12 @@ pub enum Effect {
 pub enum ActionError {
     #[error("cannot decrease position below {0:?}")]
     PositionClampedLow(Position),
+    #[error("cannot increase position above {0:?}")]
+    PositionClampedHigh(Position),
     #[error("cannot increase effect above {0:?}")]
     EffectClampedHigh(Effect),
+    #[error("cannot decrease effect below {0:?}")]
+    EffectClampedLow(Effect),
 }
 
 type Result<T> = std::result::Result<T, ActionError>;
@@ -56,6 +60,14 @@ impl Effect {
     }
 
     pub fn trade_for_position(&self, position: Position) -> Result<(Self, Position)> {
+        if *self <= Effect::Limited {
+            return Err(ActionError::EffectClampedLow(Effect::Limited));
+        }
+
+        if position == Position::Controlled {
+            return Err(ActionError::PositionClampedHigh(Position::Controlled));
+        }
+
         Ok((self.decrease(), position.improve()))
     }
 }
@@ -82,7 +94,7 @@ impl Position {
             return Err(ActionError::PositionClampedLow(Position::Desperate));
         }
 
-        if effect == Effect::Great {
+        if effect >= Effect::Great {
             return Err(ActionError::EffectClampedHigh(Effect::Great));
         }
 
@@ -170,23 +182,33 @@ mod tests {
     #[rstest]
     #[case::cannot_decrease_below_desperate(Position::Desperate, Effect::Limited, ActionError::PositionClampedLow(Position::Desperate))]
     #[case::cannot_increase_above_great(Position::Controlled, Effect::Great, ActionError::EffectClampedHigh(Effect::Great))]
+    #[case::cannot_increase_above_extreme(Position::Controlled, Effect::Extreme, ActionError::EffectClampedHigh(Effect::Great))]
     fn test_fail_to_trade_position_for_effect(#[case] initial_position: Position, #[case] initial_effect: Effect, #[case] error: ActionError) {
         let err = initial_position.trade_for_effect(initial_effect).expect_err("should have failed");
         assert_eq!(err, error);
     }
 
     #[rstest]
-    #[case::standard_to_limited_for_position(Position::Risky, Effect::Standard, Position::Controlled, Effect::Limited)]
-    #[case::great_to_standard_for_position(Position::Risky, Effect::Great, Position::Controlled, Effect::Standard)]
-    #[case::limited_to_zero_for_position(Position::Desperate, Effect::Limited, Position::Risky, Effect::Zero)]
+    #[case::standard_to_limited_for_position(Effect::Great, Position::Risky, Effect::Standard, Position::Controlled)]
+    #[case::great_to_standard_for_position(Effect::Standard, Position::Risky, Effect::Limited, Position::Controlled)]
+    #[case::standard_to_limited_for_risky_position(Effect::Standard, Position::Desperate, Effect::Limited, Position::Risky)]
     fn test_trade_effect_for_position(
-        #[case] initial_position: Position, #[case] initial_effect: Effect, #[case] expected_position: Position, #[case] expected_effect: Effect,
+        #[case] initial_effect: Effect, #[case] initial_position: Position, #[case] expected_effect: Effect, #[case] expected_position: Position,
     ) {
         let (new_effect, new_position) = initial_effect
             .trade_for_position(initial_position)
             .expect("should have traded successfully");
         assert_eq!(new_position, expected_position);
         assert_eq!(new_effect, expected_effect);
+    }
+
+    #[rstest]
+    #[case::cannot_decrease_below_limited(Effect::Limited, Position::Desperate, ActionError::EffectClampedLow(Effect::Limited))]
+    #[case::cannot_decrease_below_zero(Effect::Zero, Position::Desperate, ActionError::EffectClampedLow(Effect::Limited))]
+    #[case::cannot_increase_above_controlled(Effect::Great, Position::Controlled, ActionError::PositionClampedHigh(Position::Controlled))]
+    fn test_fail_to_trade_effect_for_position(#[case] initial_effect: Effect, #[case] initial_position: Position, #[case] error: ActionError) {
+        let err = initial_effect.trade_for_position(initial_position).expect_err("should have failed");
+        assert_eq!(err, error);
     }
 
     proptest! {
