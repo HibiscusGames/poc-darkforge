@@ -54,6 +54,10 @@ impl Effect {
     pub fn at_most(self, value: Self) -> Self {
         if self > value { value } else { self }
     }
+
+    pub fn trade_for_position(&self, position: Position) -> Result<(Self, Position)> {
+        Ok((self.decrease(), position.improve()))
+    }
 }
 
 impl Position {
@@ -169,6 +173,20 @@ mod tests {
     fn test_fail_to_trade_position_for_effect(#[case] initial_position: Position, #[case] initial_effect: Effect, #[case] error: ActionError) {
         let err = initial_position.trade_for_effect(initial_effect).expect_err("should have failed");
         assert_eq!(err, error);
+    }
+
+    #[rstest]
+    #[case::standard_to_limited_for_position(Position::Risky, Effect::Standard, Position::Controlled, Effect::Limited)]
+    #[case::great_to_standard_for_position(Position::Risky, Effect::Great, Position::Controlled, Effect::Standard)]
+    #[case::limited_to_zero_for_position(Position::Desperate, Effect::Limited, Position::Risky, Effect::Zero)]
+    fn test_trade_effect_for_position(
+        #[case] initial_position: Position, #[case] initial_effect: Effect, #[case] expected_position: Position, #[case] expected_effect: Effect,
+    ) {
+        let (new_effect, new_position) = initial_effect
+            .trade_for_position(initial_position)
+            .expect("should have traded successfully");
+        assert_eq!(new_position, expected_position);
+        assert_eq!(new_effect, expected_effect);
     }
 
     proptest! {
