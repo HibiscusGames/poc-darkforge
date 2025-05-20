@@ -1,3 +1,11 @@
+//! Action module handles game mechanics related to positions and effects.
+//!
+//! This module provides:
+//! - Position and Effect enums representing character states
+//! - Trading mechanics between positions and effects
+//! - Validation and error handling for invalid trades
+//! - Helper methods for manipulating positions and effects
+
 pub mod effect;
 pub mod position;
 

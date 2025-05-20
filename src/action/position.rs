@@ -1,5 +1,9 @@
 use super::{ActionError, Effect, Result};
 
+/// Represents the character's position in the fiction.
+///
+/// Positions range from Desperate (worst) to Controlled (best).
+/// A character's position affects their risk and potential consequences.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub enum Position {
     Desperate,
@@ -8,6 +12,9 @@ pub enum Position {
 }
 
 impl Position {
+    /// Improves the position by one step (e.g., Desperate → Risky).
+    ///
+    /// If already at the maximum position (Controlled), returns Controlled.
     pub fn improve(&self) -> Self {
         match self {
             Position::Desperate => Position::Risky,
@@ -16,6 +23,9 @@ impl Position {
         }
     }
 
+    /// Diminishes the position by one step (e.g., Controlled → Risky).
+    ///
+    /// If already at the minimum position (Desperate), returns Desperate.
     pub fn diminish(&self) -> Self {
         match self {
             Position::Controlled => Position::Risky,
@@ -24,6 +34,17 @@ impl Position {
         }
     }
 
+    /// Attempts to trade the current position for an improved effect.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The position is already at the lowest level (Desperate)
+    /// - The effect is already at or above the highest allowed level (Great)
+    ///
+    /// # Returns
+    ///
+    /// A tuple with the diminished position and the increased effect
     /// Attempts to trade the current position for an improved effect.
     ///
     /// # Errors

@@ -1,5 +1,9 @@
 use super::{ActionError, Position, Result};
 
+/// Represents the potency of an action's effect in the fiction.
+///
+/// Effects range from Zero (no effect) to Extreme (maximum effect).
+/// The effect determines how significant the outcome of an action is.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub enum Effect {
     Zero,
@@ -10,6 +14,9 @@ pub enum Effect {
 }
 
 impl Effect {
+    /// Increases the effect by one step (e.g., Limited → Standard).
+    ///
+    /// If already at the maximum effect (Extreme), returns Extreme.
     pub fn increase(&self) -> Self {
         match self {
             Effect::Zero => Effect::Limited,
@@ -20,6 +27,9 @@ impl Effect {
         }
     }
 
+    /// Decreases the effect by one step (e.g., Standard → Limited).
+    ///
+    /// If already at the minimum effect (Zero), returns Zero.
     pub fn decrease(&self) -> Self {
         match self {
             Effect::Extreme => Effect::Great,
@@ -30,10 +40,18 @@ impl Effect {
         }
     }
 
+    /// Ensures the effect is at least the specified value.
+    ///
+    /// If the effect is less than the specified value, returns the specified value.
+    /// Otherwise, returns the original effect.
     pub fn at_least(self, value: Self) -> Self {
         if self < value { value } else { self }
     }
 
+    /// Ensures the effect is at most the specified value.
+    ///
+    /// If the effect is greater than the specified value, returns the specified value.
+    /// Otherwise, returns the original effect.
     pub fn at_most(self, value: Self) -> Self {
         if self > value { value } else { self }
     }
