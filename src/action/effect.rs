@@ -152,7 +152,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_min_prevents_decrease_below_minimum(
+        fn test_at_least_prevents_decrease_below_minimum(
             effect in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)],
             clamp in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)]
         ) {
@@ -166,7 +166,7 @@ mod tests {
         }
 
         #[test]
-        fn test_min_prevents_increase_above_maximum(
+        fn test_at_most_prevents_increase_above_maximum(
             effect in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)],
             clamp in prop_oneof![Just(Effect::Zero), Just(Effect::Limited), Just(Effect::Standard), Just(Effect::Great), Just(Effect::Extreme)]
         ) {

@@ -106,7 +106,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_min_prevents_decrease_below_minimum(
+        fn test_prevents_decrease_below_minimum(
             position in prop_oneof![Just(Position::Desperate), Just(Position::Risky), Just(Position::Controlled)],
         ) {
             let diminished = position.diminish();
@@ -116,7 +116,7 @@ mod tests {
         }
 
         #[test]
-        fn test_min_prevents_increase_above_maximum(
+        fn test_prevents_increase_above_maximum(
             position in prop_oneof![Just(Position::Desperate), Just(Position::Risky), Just(Position::Controlled)],
         ) {
             let improved = position.improve();
