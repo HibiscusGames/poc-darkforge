@@ -24,6 +24,17 @@ impl Position {
         }
     }
 
+    /// Attempts to trade the current position for an improved effect.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The position is already at the lowest level (Desperate)
+    /// - The effect is already at or above the highest allowed level (Great)
+    ///
+    /// # Returns
+    ///
+    /// A tuple with the diminished position and the increased effect
     pub fn trade_for_effect(&self, effect: Effect) -> Result<(Self, Effect)> {
         if *self == Position::Desperate {
             return Err(ActionError::PositionClampedLow(Position::Desperate));

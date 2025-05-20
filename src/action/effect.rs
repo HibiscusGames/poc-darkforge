@@ -38,6 +38,17 @@ impl Effect {
         if self > value { value } else { self }
     }
 
+    /// Attempts to trade the current effect for an improved position.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The effect is already at or below the lowest allowed level (Limited)
+    /// - The position is already at the highest level (Controlled)
+    ///
+    /// # Returns
+    ///
+    /// A tuple with the diminished effect and the improved position
     pub fn trade_for_position(&self, position: Position) -> Result<(Self, Position)> {
         if *self <= Effect::Limited {
             return Err(ActionError::EffectClampedLow(Effect::Limited));

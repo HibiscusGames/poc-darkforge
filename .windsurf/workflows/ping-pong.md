@@ -74,8 +74,9 @@ This workflow implements Test-Driven Development using the ping-pong pattern bet
 - Write just enough code to make tests pass
 - Refactor continuously to maintain clean code
 - Document domain insights as they emerge
-- Switch roles every cycle or two, or if the driver gets stuck
 - **Important**: Each participant should only perform ONE step of the Red-Green-Refactor cycle before passing control
+- **Handling Roadblocks**: If progress stalls, explicitly note the blocker and collaborate on resolving it before resuming the cycle
+- **Rethinking Design**: If a significant design issue emerges, enter a dedicated "Design Review" phase before continuing
 
 ## Phase Tracking
 
