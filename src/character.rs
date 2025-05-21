@@ -6,121 +6,99 @@
 //! - Harm tracking
 //! - Trauma tracking
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use std::{collections::HashMap, fmt::Debug, hash::Hash};
+
+use derive_builder::Builder;
+
+use crate::data::value::UnsignedInteger;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Action {
+    // Insight
+    /// When you Hunt, you carefully track a target
     Hunt,
+    /// When you `Study`, you scrutinize details and interpret evidence.
     Study,
+    /// When you `Survey`, you observe the situation and anticipate outcomes.
     Survey,
+    /// When you `Tinker`, you fiddle with devices and mechanisms.
     Tinker,
+    // Prowess
+    /// When you `Finesse`, you employ dextrous manipulation or subtle misdirection.
     Finesse,
+    /// When you `Prowl`, you traverse skilfully and quietly.
     Prowl,
+    /// When you `Skirmish`, you entangle a target in close combat so they can’t easily escape.
     Skirmish,
+    /// When you `Wreck`, you unleash savage force.
     Wreck,
+    // Resolve
+    /// When you `Attune`, you open your mind to arcane power.
     Attune,
+    /// When you `Command`, you compel swift obedience.
     Command,
+    /// When you `Consort`, you socialize with friends and contacts.
     Consort,
+    /// When you `Sway`, you influence with guile, charm or argument.
     Sway,
 }
 
-pub type Character = CharacterImpl<0, 4>;
-
+/// A character represents a member of the crew controlled by the player.
+///
+/// Characters have:
+/// - A name
+/// - A set of skill ratings for actions
+/// - A stress tracker
+/// - A trauma tracker
+/// - A harm tracker
 #[derive(Debug, PartialEq)]
-pub struct CharacterImpl<const MIN: u8, const MAX: u8> {
+pub struct Character {
+    /// The name of the character.
     name: String,
-    actions: Actions<MIN, MAX>,
+    /// The skill ratings for the actions the character can perform.
+    actions: Actions,
+    /// The stress tracker for the character.
+    stress: Stress,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Actions<const MIN: u8, const MAX: u8> {
-    // Insight
-    /// When you Hunt, you carefully track a target
-    hunt: u8,
-    /// When you `study`, you scrutinize details and interpret evidence.
-    study: u8,
-    /// When you `survey`, you observe the situation and anticipate outcomes.
-    survey: u8,
-    /// When you `tinker`, you fiddle with devices and mechanisms.
-    tinker: u8,
-    // Prowess
-    /// When you `finesse`, you employ dextrous manipulation or subtle misdirection.
-    finesse: u8,
-    /// When you `prowl`, you traverse skilfully and quietly.
-    prowl: u8,
-    /// When you `skirmish`, you entangle a target in close combat so they can’t easily escape.
-    skirmish: u8,
-    /// When you `wreck`, you unleash savage force.
-    wreck: u8,
-    // Resolve
-    /// When you `attune`, you open your mind to arcane power.
-    attune: u8,
-    /// When you `command`, you compel swift obedience.
-    command: u8,
-    /// When you `consort`, you socialize with friends and contacts.
-    consort: u8,
-    /// When you `sway`, you influence with guile, charm or argument.
-    sway: u8,
-}
+type Actions = HashMap<Action, ActionValue>;
+type ActionValue = UnsignedInteger<u8, 0, 4>;
+type Stress = UnsignedInteger<u8, 0, 9>;
 
-impl<const MIN: u8, const MAX: u8> CharacterImpl<MIN, MAX> {
+impl Character {
     pub fn new(name: &str) -> Self {
-        Self {
+        Character {
             name: name.to_string(),
-            actions: Actions {
-                hunt: 0,
-                study: 0,
-                survey: 0,
-                tinker: 0,
-                finesse: 0,
-                prowl: 0,
-                skirmish: 0,
-                wreck: 0,
-                attune: 0,
-                command: 0,
-                consort: 0,
-                sway: 0,
-            },
+            actions: init_actions(),
+            stress: Stress::default(),
         }
     }
 
-    /// Gets the rating for the specified action.
-    pub fn get_action_rating(&self, action: Action) -> u8 {
-        match action {
-            Action::Hunt => self.actions.hunt,
-            Action::Study => self.actions.study,
-            Action::Survey => self.actions.survey,
-            Action::Tinker => self.actions.tinker,
-            Action::Finesse => self.actions.finesse,
-            Action::Prowl => self.actions.prowl,
-            Action::Skirmish => self.actions.skirmish,
-            Action::Wreck => self.actions.wreck,
-            Action::Attune => self.actions.attune,
-            Action::Command => self.actions.command,
-            Action::Consort => self.actions.consort,
-            Action::Sway => self.actions.sway,
-        }
+    pub fn action(&self, action: Action) -> Option<&ActionValue> {
+        self.actions.get(&action)
     }
 
-    /// Sets the rating for the specified action.
-    ///
-    /// The rating is clamped to the valid range of 0-4.
-    pub fn set_action_rating(&mut self, action: Action, rating: u8) {
-        let clamped_rating = rating.clamp(MIN, MAX);
-
-        match action {
-            Action::Hunt => self.actions.hunt = clamped_rating,
-            Action::Study => self.actions.study = clamped_rating,
-            Action::Survey => self.actions.survey = clamped_rating,
-            Action::Tinker => self.actions.tinker = clamped_rating,
-            Action::Finesse => self.actions.finesse = clamped_rating,
-            Action::Prowl => self.actions.prowl = clamped_rating,
-            Action::Skirmish => self.actions.skirmish = clamped_rating,
-            Action::Wreck => self.actions.wreck = clamped_rating,
-            Action::Attune => self.actions.attune = clamped_rating,
-            Action::Command => self.actions.command = clamped_rating,
-            Action::Consort => self.actions.consort = clamped_rating,
-            Action::Sway => self.actions.sway = clamped_rating,
-        }
+    pub fn action_mut(&mut self, action: Action) -> Option<&mut ActionValue> {
+        self.actions.get_mut(&action)
     }
+}
+
+fn init_actions() -> Actions {
+    let mut actions = Actions::with_capacity(12);
+    actions.insert(Action::Hunt, ActionValue::default());
+    actions.insert(Action::Study, ActionValue::default());
+    actions.insert(Action::Survey, ActionValue::default());
+    actions.insert(Action::Tinker, ActionValue::default());
+    actions.insert(Action::Finesse, ActionValue::default());
+    actions.insert(Action::Prowl, ActionValue::default());
+    actions.insert(Action::Skirmish, ActionValue::default());
+    actions.insert(Action::Wreck, ActionValue::default());
+    actions.insert(Action::Attune, ActionValue::default());
+    actions.insert(Action::Command, ActionValue::default());
+    actions.insert(Action::Consort, ActionValue::default());
+    actions.insert(Action::Sway, ActionValue::default());
+
+    actions
 }
 
 #[cfg(test)]
@@ -128,32 +106,7 @@ mod tests {
     use proptest::prelude::*;
 
     use super::*;
-
-    #[test]
-    fn test_new_character_has_default_action_ratings_of_0() {
-        let character = Character::new("Test Character");
-
-        assert_eq!(
-            Character {
-                name: "Test Character".to_string(),
-                actions: Actions {
-                    hunt: 0,
-                    study: 0,
-                    survey: 0,
-                    tinker: 0,
-                    finesse: 0,
-                    prowl: 0,
-                    skirmish: 0,
-                    wreck: 0,
-                    attune: 0,
-                    command: 0,
-                    consort: 0,
-                    sway: 0,
-                },
-            },
-            character
-        );
-    }
+    use crate::data::value::{Error as ValueError, Value};
 
     proptest! {
         #[test]
@@ -163,24 +116,39 @@ mod tests {
         ) {
             let mut character = Character::new("Test Character");
 
-            character.set_action_rating(action, value);
+            character.action_mut(action).expect("should have found action").set(value).expect("should have set action rating");
 
-            assert_eq!(value, character.get_action_rating(action));
+            assert_eq!(value, character.action(action).expect("should have found action").get());
         }
 
         #[test]
-        fn test_action_ratings_are_clamped_to_valid_range(
+        fn test_action_ratings_above_max_are_clamped_to_max(
             action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
-            value in u8::MIN..u8::MAX
+            value in 5u8..u8::MAX
         ) {
-            const MIN: u8 = 1;
-            const MAX: u8 = 5;
+            let mut character = Character::new("Test Character");
 
-            let mut character = CharacterImpl::<MIN, MAX>::new("Test Character");
+            match character.action_mut(action).expect("should have found action").set(value).expect_err("should have clamped") {
+                ValueError::ClampedMax => assert!(value > 4, "Action rating clamped when it was lower than max"),
+                e => panic!("unexpected error: {e:?}"),
+            }
 
-            character.set_action_rating(action, value);
-            assert!(character.get_action_rating(action) >= MIN, "Action rating must be greater than MIN");
-            assert!(character.get_action_rating(action) <= MAX, "Action rating must be lower than MAX");
+            assert_eq!(4, character.action(action).expect("should have found action").get(), "Action rating should clamp precisely to MAX (4)");
+        }
+
+        #[test]
+        fn test_increment_action_rating_clamps_to_max(
+            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
+            increment in 5u8..=u8::MAX
+        ) {
+            let mut character = Character::new("Test Character");
+
+            match character.action_mut(action).expect("should have found action").increment(increment).expect_err("should have clamped") {
+                ValueError::ClampedMax => assert!(increment > 4, "Action rating clamped when it was lower than max"),
+                e => panic!("unexpected error: {e:?}"),
+            }
+
+            assert_eq!(4, character.action(action).expect("should have found action").get(), "Action rating should clamp precisely to MAX (4)");
         }
     }
 }

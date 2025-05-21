@@ -4,6 +4,8 @@ use std::error::Error;
 pub mod action;
 /// Implements character mechanics including action ratings, harm, and trauma.
 pub mod character;
+/// Provides data structures and utilities for the game.
+pub mod data;
 /// Provides generic dice rolling functionality with support for different distributions and sorting orders.
 pub mod dice;
 /// Implements roll mechanics for actions and resistances, including outcome evaluation.
