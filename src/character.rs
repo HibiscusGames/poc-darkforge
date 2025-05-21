@@ -22,14 +22,16 @@ pub enum Action {
     Sway,
 }
 
+pub type Character = CharacterImpl<0, 4>;
+
 #[derive(Debug, PartialEq)]
-pub struct Character {
+pub struct CharacterImpl<const MIN: u8, const MAX: u8> {
     name: String,
-    actions: Actions,
+    actions: Actions<MIN, MAX>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Actions {
+pub struct Actions<const MIN: u8, const MAX: u8> {
     // Insight
     /// When you Hunt, you carefully track a target
     hunt: u8,
@@ -59,7 +61,7 @@ pub struct Actions {
     sway: u8,
 }
 
-impl Character {
+impl<const MIN: u8, const MAX: u8> CharacterImpl<MIN, MAX> {
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -102,19 +104,21 @@ impl Character {
     ///
     /// The rating is clamped to the valid range of 0-4.
     pub fn set_action_rating(&mut self, action: Action, rating: u8) {
+        let clamped_rating = rating.clamp(MIN, MAX);
+
         match action {
-            Action::Hunt => self.actions.hunt = rating,
-            Action::Study => self.actions.study = rating,
-            Action::Survey => self.actions.survey = rating,
-            Action::Tinker => self.actions.tinker = rating,
-            Action::Finesse => self.actions.finesse = rating,
-            Action::Prowl => self.actions.prowl = rating,
-            Action::Skirmish => self.actions.skirmish = rating,
-            Action::Wreck => self.actions.wreck = rating,
-            Action::Attune => self.actions.attune = rating,
-            Action::Command => self.actions.command = rating,
-            Action::Consort => self.actions.consort = rating,
-            Action::Sway => self.actions.sway = rating,
+            Action::Hunt => self.actions.hunt = clamped_rating,
+            Action::Study => self.actions.study = clamped_rating,
+            Action::Survey => self.actions.survey = clamped_rating,
+            Action::Tinker => self.actions.tinker = clamped_rating,
+            Action::Finesse => self.actions.finesse = clamped_rating,
+            Action::Prowl => self.actions.prowl = clamped_rating,
+            Action::Skirmish => self.actions.skirmish = clamped_rating,
+            Action::Wreck => self.actions.wreck = clamped_rating,
+            Action::Attune => self.actions.attune = clamped_rating,
+            Action::Command => self.actions.command = clamped_rating,
+            Action::Consort => self.actions.consort = clamped_rating,
+            Action::Sway => self.actions.sway = clamped_rating,
         }
     }
 }
@@ -162,6 +166,21 @@ mod tests {
             character.set_action_rating(action, value);
 
             assert_eq!(value, character.get_action_rating(action));
+        }
+
+        #[test]
+        fn test_action_ratings_are_clamped_to_valid_range(
+            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
+            value in u8::MIN..u8::MAX
+        ) {
+            const MIN: u8 = 1;
+            const MAX: u8 = 5;
+
+            let mut character = CharacterImpl::<MIN, MAX>::new("Test Character");
+
+            character.set_action_rating(action, value);
+            assert!(character.get_action_rating(action) >= MIN, "Action rating must be greater than MIN");
+            assert!(character.get_action_rating(action) <= MAX, "Action rating must be lower than MAX");
         }
     }
 }
