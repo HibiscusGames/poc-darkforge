@@ -6,6 +6,22 @@
 //! - Harm tracking
 //! - Trauma tracking
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Action {
+    Hunt,
+    Study,
+    Survey,
+    Tinker,
+    Finesse,
+    Prowl,
+    Skirmish,
+    Wreck,
+    Attune,
+    Command,
+    Consort,
+    Sway,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Character {
     name: String,
@@ -16,31 +32,31 @@ pub struct Character {
 pub struct Actions {
     // Insight
     /// When you Hunt, you carefully track a target
-    pub hunt: u8,
+    hunt: u8,
     /// When you `study`, you scrutinize details and interpret evidence.
-    pub study: u8,
+    study: u8,
     /// When you `survey`, you observe the situation and anticipate outcomes.
-    pub survey: u8,
+    survey: u8,
     /// When you `tinker`, you fiddle with devices and mechanisms.
-    pub tinker: u8,
+    tinker: u8,
     // Prowess
     /// When you `finesse`, you employ dextrous manipulation or subtle misdirection.
-    pub finesse: u8,
+    finesse: u8,
     /// When you `prowl`, you traverse skilfully and quietly.
-    pub prowl: u8,
+    prowl: u8,
     /// When you `skirmish`, you entangle a target in close combat so they can’t easily escape.
-    pub skirmish: u8,
+    skirmish: u8,
     /// When you `wreck`, you unleash savage force.
-    pub wreck: u8,
+    wreck: u8,
     // Resolve
     /// When you `attune`, you open your mind to arcane power.
-    pub attune: u8,
+    attune: u8,
     /// When you `command`, you compel swift obedience.
-    pub command: u8,
+    command: u8,
     /// When you `consort`, you socialize with friends and contacts.
-    pub consort: u8,
+    consort: u8,
     /// When you `sway`, you influence with guile, charm or argument.
-    pub sway: u8,
+    sway: u8,
 }
 
 impl Character {
@@ -63,14 +79,54 @@ impl Character {
             },
         }
     }
+
+    /// Gets the rating for the specified action.
+    pub fn get_action_rating(&self, action: Action) -> u8 {
+        match action {
+            Action::Hunt => self.actions.hunt,
+            Action::Study => self.actions.study,
+            Action::Survey => self.actions.survey,
+            Action::Tinker => self.actions.tinker,
+            Action::Finesse => self.actions.finesse,
+            Action::Prowl => self.actions.prowl,
+            Action::Skirmish => self.actions.skirmish,
+            Action::Wreck => self.actions.wreck,
+            Action::Attune => self.actions.attune,
+            Action::Command => self.actions.command,
+            Action::Consort => self.actions.consort,
+            Action::Sway => self.actions.sway,
+        }
+    }
+
+    /// Sets the rating for the specified action.
+    ///
+    /// The rating is clamped to the valid range of 0-4.
+    pub fn set_action_rating(&mut self, action: Action, rating: u8) {
+        match action {
+            Action::Hunt => self.actions.hunt = rating,
+            Action::Study => self.actions.study = rating,
+            Action::Survey => self.actions.survey = rating,
+            Action::Tinker => self.actions.tinker = rating,
+            Action::Finesse => self.actions.finesse = rating,
+            Action::Prowl => self.actions.prowl = rating,
+            Action::Skirmish => self.actions.skirmish = rating,
+            Action::Wreck => self.actions.wreck = rating,
+            Action::Attune => self.actions.attune = rating,
+            Action::Command => self.actions.command = rating,
+            Action::Consort => self.actions.consort = rating,
+            Action::Sway => self.actions.sway = rating,
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::*;
 
     #[test]
-    fn test_new_character_has_default_action_ratings() {
+    fn test_new_character_has_default_action_ratings_of_0() {
         let character = Character::new("Test Character");
 
         assert_eq!(
@@ -93,5 +149,19 @@ mod tests {
             },
             character
         );
+    }
+
+    proptest! {
+        #[test]
+        fn test_set_and_get_action_between_0_and_4(
+            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
+            value in 0u8..=4u8
+        ) {
+            let mut character = Character::new("Test Character");
+
+            character.set_action_rating(action, value);
+
+            assert_eq!(value, character.get_action_rating(action));
+        }
     }
 }
