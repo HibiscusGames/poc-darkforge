@@ -57,7 +57,17 @@ This workflow implements Test-Driven Development using the ping-pong pattern bet
 
 1. The AI reviews the human's implementation
 2. The AI refactors the code if needed while keeping tests passing
-3. The AI returns control to the human
+3. The AI returns control to the human with a clear message:
+
+   ```markdown
+   ## Current Phase: AI (Refactor)
+   ## Current Cycle: [Number]
+   ## Next Phase: Human (Red)
+
+   [Refactoring comments if any]
+
+   Now it's your turn to write a failing test for the next feature.
+   ```
 
 ### Loop until task is complete
 

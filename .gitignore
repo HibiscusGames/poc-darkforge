@@ -65,6 +65,7 @@
 !.windsurfrules
 !.windsurf/
 !.windsurf/workflows/
+!.windsurf/workflows/*.md
 
 #### Directories ###
 !src/action
