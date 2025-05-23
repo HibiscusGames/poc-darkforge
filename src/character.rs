@@ -44,6 +44,29 @@ pub enum Action {
     Sway,
 }
 
+/// A trauma is a persistent emotional or psychological condition that affects a character's behaviour and outlook.
+/// It is gained as a consequence of maxing out the stress meter during a heist.
+/// Traumas can be an effective way to gain experience if they are allowed to affect the heist. But this can have consequences.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Trauma {
+    /// You’re not moved by emotional appeals or social bonds.
+    Cold,
+    /// You’re often lost in reverie, reliving past horrors, seeing things.
+    Haunted,
+    /// You’re enthralled by one thing: an activity, a person, an ideology.
+    Obsessed,
+    /// You imagine danger everywhere; you can’t trust others.
+    Paranoid,
+    /// You have little regard for your own safety or best interests.
+    Reckless,
+    /// You lose your edge; you become sentimental, passive, gentle.
+    Soft,
+    /// Your emotional state is volatile. You can instantly rage, or fall into despair, act impulsively, or freeze up.
+    Unstable,
+    /// You seek out opportunities to hurt people, even for no good reason.
+    Vicious,
+}
+
 /// A character represents a member of the crew controlled by the player.
 ///
 /// Characters have:
@@ -60,11 +83,16 @@ pub struct Character {
     actions: Actions,
     /// The stress tracker for the character.
     stress: Stress,
+    /// The trauma tracker for the character.
+    traumas: Traumas,
 }
 
 type Actions = HashMap<Action, ActionValue>;
 type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 type Stress = UnsignedInteger<u8, 0, STRESS_MAX>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Traumas([Option<Trauma>; 4]);
 
 impl Character {
     pub fn new(name: &str) -> Self {
@@ -72,6 +100,7 @@ impl Character {
             name: name.to_string(),
             actions: init_actions(),
             stress: Stress::default(),
+            traumas: Traumas([None; 4]),
         }
     }
 
@@ -89,6 +118,10 @@ impl Character {
 
     pub fn stress_mut(&mut self) -> &mut Stress {
         &mut self.stress
+    }
+
+    pub fn traumas(&self) -> &Traumas {
+        &self.traumas
     }
 
     /// Returns true if the character has pending trauma (stress level at maximum)
@@ -113,6 +146,12 @@ fn init_actions() -> Actions {
     actions.insert(Action::Sway, ActionValue::default());
 
     actions
+}
+
+impl Traumas {
+    pub fn is_empty(&self) -> bool {
+        self.0.iter().all(|t| t.is_none())
+    }
 }
 
 #[cfg(test)]
@@ -221,5 +260,12 @@ mod tests {
         character.stress_mut().set(10).expect("should have set stress level");
 
         assert!(character.has_pending_trauma());
+    }
+
+    #[test]
+    fn test_new_character_has_empty_trauma_list() {
+        let character = Character::new("Test Character");
+
+        assert!(character.traumas().is_empty());
     }
 }

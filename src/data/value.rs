@@ -63,15 +63,19 @@ pub struct SignedInteger<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, c
 impl<I: PrimInt + Unsigned + Hash, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Default for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
     fn default() -> Self {
         Self {
-            max: I::from(DEFAULT_MAX).unwrap_or(I::max_value()),
-            min: I::from(DEFAULT_MIN).unwrap_or(I::min_value()),
-            current: I::from(DEFAULT_MIN).unwrap_or(I::min_value()),
+            max: I::from(DEFAULT_MAX).expect("DEFAULT_MAX must fit in target type"),
+            min: I::from(DEFAULT_MIN).expect("DEFAULT_MIN must fit in target type"),
+            current: I::from(DEFAULT_MIN).expect("DEFAULT_MIN must fit in target type"),
         }
     }
 }
 
 impl<I: PrimInt + Unsigned + Hash, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
     pub fn new(min: I, max: I, current: I) -> Self {
+        assert!(DEFAULT_MIN <= DEFAULT_MAX, "DEFAULT_MIN must be <= DEFAULT_MAX");
+        assert!(min <= max, "min must be <= max");
+        assert!(current >= min && current <= max, "current must be within [min, max]");
+
         Self { min, max, current }
     }
 }
@@ -107,6 +111,10 @@ impl<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, const DEFAULT_MAX: is
 
 impl<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
     pub fn new(min: I, max: I, current: I) -> Self {
+        assert!(DEFAULT_MIN <= DEFAULT_MAX, "DEFAULT_MIN must be <= DEFAULT_MAX");
+        assert!(min <= max, "min must be <= max");
+        assert!(current >= min && current <= max, "current must be within [min, max]");
+
         Self { min, max, current }
     }
 }
