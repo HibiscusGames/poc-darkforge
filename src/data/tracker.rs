@@ -138,7 +138,6 @@ impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
             return Err(Error::TooManyItems(N, 1));
         }
 
-        // Find the first empty slot and insert the value
         for slot in &mut self.inner {
             if slot.is_none() {
                 *slot = Some(value);
@@ -147,7 +146,7 @@ impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
             }
         }
 
-        Err(Error::TooManyItems(N, N))
+        unreachable!("No empty slot found despite is_full() check");
     }
 
     fn list(&self) -> Vec<T> {

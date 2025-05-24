@@ -176,7 +176,7 @@ dependencies = [
  "derive_builder",
  "enum-map",
  "num-traits",
- "paste",
+ "paste2",
  "predicates",
  "proptest",
  "rand 0.9.1",
@@ -471,10 +471,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
-name = "paste"
-version = "1.0.15"
+name = "paste2"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+checksum = "8b4bc7bd2ccf889edc6ea30b2ec79fceaa61ff701b7c1da78d005ed4c7cc93d0"
 
 [[package]]
 name = "pin-project-lite"

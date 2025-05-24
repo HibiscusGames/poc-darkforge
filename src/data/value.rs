@@ -198,7 +198,7 @@ impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
 
 #[cfg(test)]
 mod tests {
-    use paste::paste;
+    use paste2::paste;
     use proptest::prelude::*;
 
     use super::*;
