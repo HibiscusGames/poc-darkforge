@@ -1,4 +1,8 @@
-use std::hash::Hash;
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    ops::{Deref, DerefMut},
+};
 
 use num_traits::{PrimInt, Signed, Unsigned};
 use thiserror::Error;
@@ -11,6 +15,12 @@ pub enum Error {
     /// The value is at the minimum.
     #[error("value clamped to min")]
     ClampedMin,
+    /// The value is out of bounds.
+    #[error("value {0} must be between {1} and {2}")]
+    OutOfBounds(String, String, String),
+    /// InvalidBounds
+    #[error("invalid bounds: {0} must be less than {1}")]
+    InvalidBounds(String, String),
 }
 
 /// A value that can be incremented and decremented and is clamped to a range.
@@ -18,9 +28,7 @@ pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Ha
     /// Increments the action value by the specified amount.
     ///
     /// Returns `Err(ValueError::Max)` if the action value is already at the maximum.
-    fn increment(&mut self, amount: I) -> Result<(), Error> {
-        self.set(self.get().saturating_add(amount))
-    }
+    fn increment(&mut self, amount: I) -> Result<(), Error>;
 
     /// Decrements the action value by the specified amount.
     ///
@@ -41,17 +49,13 @@ pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Ha
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct UnsignedInteger<I: PrimInt + Unsigned + Hash, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> {
-    // The minimum value.
-    min: I,
-    // The maximum value.
-    max: I,
-    // The current value.
-    current: I,
-}
+pub struct UnsignedInteger<I: PrimInt + Unsigned + Hash, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize>(Integer<I>);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct SignedInteger<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> {
+pub struct SignedInteger<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize>(Integer<I>);
+
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Integer<I: PrimInt + Hash> {
     // The minimum value.
     min: I,
     // The maximum value.
@@ -60,80 +64,115 @@ pub struct SignedInteger<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, c
     current: I,
 }
 
-impl<I: PrimInt + Unsigned + Hash, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Default for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
+impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
+    pub fn new(min: I, max: I, current: I) -> Result<Self, Error> {
+        assert!(
+            DEFAULT_MIN <= DEFAULT_MAX,
+            "DEFAULT_MIN ({DEFAULT_MIN}) must be <= DEFAULT_MAX ({DEFAULT_MAX})"
+        );
+        Ok(Self(Integer::new(min, max, current)?))
+    }
+}
+
+impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Default
+    for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
+{
     fn default() -> Self {
-        Self {
-            max: I::from(DEFAULT_MAX).expect("DEFAULT_MAX must fit in target type"),
-            min: I::from(DEFAULT_MIN).expect("DEFAULT_MIN must fit in target type"),
-            current: I::from(DEFAULT_MIN).expect("DEFAULT_MIN must fit in target type"),
-        }
+        Self(
+            Integer::new(
+                I::from(DEFAULT_MIN).unwrap(),
+                I::from(DEFAULT_MAX).unwrap(),
+                I::from(DEFAULT_MIN).unwrap(),
+            )
+            .unwrap(),
+        )
     }
 }
 
-impl<I: PrimInt + Unsigned + Hash, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    pub fn new(min: I, max: I, current: I) -> Self {
+impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Deref
+    for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
+{
+    type Target = Integer<I>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> DerefMut
+    for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
+    pub fn new(min: I, max: I, current: I) -> Result<Self, Error> {
         assert!(DEFAULT_MIN <= DEFAULT_MAX, "DEFAULT_MIN must be <= DEFAULT_MAX");
-        assert!(min <= max, "min must be <= max");
-        assert!(current >= min && current <= max, "current must be within [min, max]");
-
-        Self { min, max, current }
+        Ok(Self(Integer::new(min, max, current)?))
     }
 }
 
-impl<I: PrimInt + Unsigned + Hash, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Value<I> for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    fn set(&mut self, amount: I) -> Result<(), Error> {
-        let clamped = amount.clamp(self.min, self.max);
-        let out = if amount < self.min {
-            Err(Error::ClampedMin)
-        } else if amount > self.max {
-            Err(Error::ClampedMax)
-        } else {
-            Ok(())
-        };
-        self.current = clamped;
-        out
-    }
-
-    fn get(&self) -> I {
-        self.current
-    }
-}
-
-impl<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Default for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
+impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Default for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
     fn default() -> Self {
-        Self {
-            max: I::from(DEFAULT_MAX).unwrap_or(I::max_value()),
-            min: I::from(DEFAULT_MIN).unwrap_or(I::min_value()),
-            current: I::from(DEFAULT_MIN).unwrap_or(I::min_value()),
+        Self(
+            Integer::new(
+                I::from(DEFAULT_MIN).unwrap(),
+                I::from(DEFAULT_MAX).unwrap(),
+                I::from(DEFAULT_MIN).unwrap(),
+            )
+            .unwrap(),
+        )
+    }
+}
+
+impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Deref for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
+    type Target = Integer<I>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> DerefMut for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<I: PrimInt + Hash + Debug> Integer<I> {
+    pub fn new(min: I, max: I, current: I) -> Result<Self, Error> {
+        if min > max {
+            return Err(Error::InvalidBounds(format!("{:?}", min), format!("{:?}", max)));
         }
-    }
-}
+        if current < min || current > max {
+            return Err(Error::OutOfBounds(format!("{:?}", current), format!("{:?}", min), format!("{:?}", max)));
+        }
 
-impl<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    pub fn new(min: I, max: I, current: I) -> Self {
-        assert!(DEFAULT_MIN <= DEFAULT_MAX, "DEFAULT_MIN must be <= DEFAULT_MAX");
-        assert!(min <= max, "min must be <= max");
-        assert!(current >= min && current <= max, "current must be within [min, max]");
-
-        Self { min, max, current }
-    }
-}
-
-impl<I: PrimInt + Signed + Hash, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Value<I> for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    fn set(&mut self, amount: I) -> Result<(), Error> {
-        let clamped = amount.clamp(self.min, self.max);
-        let out = if amount < self.min {
-            Err(Error::ClampedMin)
-        } else if amount > self.max {
-            Err(Error::ClampedMax)
-        } else {
-            Ok(())
-        };
-        self.current = clamped;
-        out
+        Ok(Self { min, max, current })
     }
 
-    fn get(&self) -> I {
+    pub fn increment(&mut self, amount: I) -> Result<(), Error> {
+        self.set(self.get().saturating_add(amount))
+    }
+
+    pub fn decrement(&mut self, amount: I) -> Result<(), Error> {
+        self.set(self.get().saturating_sub(amount))
+    }
+
+    pub fn set(&mut self, amount: I) -> Result<(), Error> {
+        if amount < self.min {
+            return Err(Error::ClampedMin);
+        }
+        if amount > self.max {
+            return Err(Error::ClampedMax);
+        }
+        self.current = amount;
+        Ok(())
+    }
+
+    pub fn get(&self) -> I {
         self.current
     }
 }
@@ -155,9 +194,10 @@ mod tests {
                             let mut value = $val_type::<$typ, 10, 100>::default();
 
                             match value.set(v) {
-                                Err(clamped) => match clamped {
+                                Err(e) => match e {
                                     $crate::data::value::Error::ClampedMax => assert!(v >= 100 as $typ, "Value clamped when it was lower than max: {v} > 100"),
                                     $crate::data::value::Error::ClampedMin => assert!(v <= 10 as $typ, "Value clamped when it was higher than min: {v} < 10"),
+                                    _ => panic!("unexpected error: {}", e)
                                 },
                                 Ok(_) => {
                                     let actual = value.get();

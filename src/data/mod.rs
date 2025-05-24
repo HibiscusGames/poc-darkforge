@@ -3,7 +3,7 @@ pub mod value;
 
 use thiserror::Error;
 pub use tracker::Tracker;
-pub use value::Value;
+pub use value::{Integer, SignedInteger, UnsignedInteger, Value};
 
 #[derive(Error, Debug)]
 pub enum Error {

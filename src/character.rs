@@ -8,7 +8,7 @@
 
 use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
-use crate::data::value::{UnsignedInteger, Value};
+use crate::data::value::UnsignedInteger;
 
 const ACTION_MAX: usize = 4;
 const STRESS_MAX: usize = 10;
@@ -159,7 +159,7 @@ mod tests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::data::value::{Error as ValueError, Value};
+    use crate::data::value::Error as ValueError;
 
     proptest! {
         #[test]
