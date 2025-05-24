@@ -161,7 +161,7 @@ mod tests {
                 prop_assert!(decreased < effect, "Decreased effect {:?} should be less than original effect {:?}", decreased, effect)
             }
 
-            let clamped = decreased.at_least(clamp.clone());
+            let clamped = decreased.at_least(clamp);
             prop_assert!(clamped >= clamp, "Clamped effect {:?} should not be less than clamp value {:?}", clamped, clamp);
         }
 
@@ -175,7 +175,7 @@ mod tests {
                 prop_assert!(increased > effect, "Increased effect {:?} should be greater than original effect {:?}", increased, effect)
             }
 
-            let clamped = increased.at_most(clamp.clone());
+            let clamped = increased.at_most(clamp);
             prop_assert!(clamped <= clamp, "Clamped effect {:?} should not be greater than clamp value {:?}", clamped, clamp);
         }
     }
