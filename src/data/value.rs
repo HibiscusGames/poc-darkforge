@@ -33,10 +33,7 @@ pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Ha
     /// Decrements the action value by the specified amount.
     ///
     /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
-    fn decrement(&mut self, amount: I) -> Result<I, Error> {
-        // Saturating sub avoids underflow when amount > current.
-        self.set(self.get().saturating_sub(amount))
-    }
+    fn decrement(&mut self, amount: I) -> Result<I, Error>;
 
     /// Sets the action value to the specified amount.
     ///
@@ -74,15 +71,15 @@ impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAU
     }
 }
 
-impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Default
+impl<I: PrimInt + Unsigned + Hash + Debug + Default, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Default
     for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
 {
     fn default() -> Self {
         Self(
             Integer::new(
-                I::from(DEFAULT_MIN).unwrap(),
-                I::from(DEFAULT_MAX).unwrap(),
-                I::from(DEFAULT_MIN).unwrap(),
+                I::from(DEFAULT_MIN).unwrap_or_default(),
+                I::from(DEFAULT_MAX).unwrap_or_default(),
+                I::from(DEFAULT_MIN).unwrap_or_default(),
             )
             .unwrap(),
         )
@@ -114,13 +111,15 @@ impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT
     }
 }
 
-impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Default for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
+impl<I: PrimInt + Signed + Hash + Debug + Default, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Default
+    for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
+{
     fn default() -> Self {
         Self(
             Integer::new(
-                I::from(DEFAULT_MIN).unwrap(),
-                I::from(DEFAULT_MAX).unwrap(),
-                I::from(DEFAULT_MIN).unwrap(),
+                I::from(DEFAULT_MIN).unwrap_or_default(),
+                I::from(DEFAULT_MAX).unwrap_or_default(),
+                I::from(DEFAULT_MIN).unwrap_or_default(),
             )
             .unwrap(),
         )
