@@ -6,14 +6,20 @@
 //! - Harm tracking
 //! - Trauma tracking
 
-use std::{collections::HashMap, fmt::Debug, hash::Hash};
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    ops::{Deref, DerefMut},
+};
 
-use crate::data::{ArrayTracker, UnsignedInteger};
+use enum_map::{Enum, EnumMap};
+
+use crate::data::{ArrayTracker, UnsignedInteger, Value};
 
 const ACTION_MAX: usize = 4;
 const STRESS_MAX: usize = 10;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Enum, PartialEq, Eq, Hash)]
 pub enum Action {
     // Insight
     /// When you Hunt, you carefully track a target
@@ -87,7 +93,8 @@ pub struct Character {
     traumas: Traumas,
 }
 
-type Actions = HashMap<Action, ActionValue>;
+#[derive(Debug, Default, PartialEq)]
+struct Actions(EnumMap<Action, ActionValue>);
 type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 type Stress = UnsignedInteger<u8, 0, STRESS_MAX>;
 type Traumas = ArrayTracker<Trauma, 4>;
@@ -96,20 +103,20 @@ impl Character {
     pub fn new(name: &str) -> Self {
         Character {
             name: name.to_string(),
-            actions: init_actions(),
+            actions: Actions::default(),
             stress: Stress::default(),
             traumas: Traumas::default(),
         }
     }
 
     /// Returns a reference to the skill rating for the given action.
-    pub fn action(&self, action: Action) -> Option<&ActionValue> {
-        self.actions.get(&action)
+    pub fn action(&self, action: Action) -> &ActionValue {
+        &self.actions.deref()[action]
     }
 
     /// Returns a mutable reference to the skill rating for the given action.
-    pub fn action_mut(&mut self, action: Action) -> Option<&mut ActionValue> {
-        self.actions.get_mut(&action)
+    pub fn action_mut(&mut self, action: Action) -> &mut ActionValue {
+        &mut self.actions.deref_mut()[action]
     }
 
     /// Returns a reference to the stress tracker for the character.
@@ -133,22 +140,18 @@ impl Character {
     }
 }
 
-fn init_actions() -> Actions {
-    let mut actions = Actions::with_capacity(12);
-    actions.insert(Action::Hunt, ActionValue::default());
-    actions.insert(Action::Study, ActionValue::default());
-    actions.insert(Action::Survey, ActionValue::default());
-    actions.insert(Action::Tinker, ActionValue::default());
-    actions.insert(Action::Finesse, ActionValue::default());
-    actions.insert(Action::Prowl, ActionValue::default());
-    actions.insert(Action::Skirmish, ActionValue::default());
-    actions.insert(Action::Wreck, ActionValue::default());
-    actions.insert(Action::Attune, ActionValue::default());
-    actions.insert(Action::Command, ActionValue::default());
-    actions.insert(Action::Consort, ActionValue::default());
-    actions.insert(Action::Sway, ActionValue::default());
+impl Deref for Actions {
+    type Target = EnumMap<Action, ActionValue>;
 
-    actions
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Actions {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 #[cfg(test)]
@@ -166,9 +169,9 @@ mod tests {
         ) {
             let mut character = Character::new("Test Character");
 
-            character.action_mut(action).expect("should have found action").set(value).expect("should have set action rating");
+            character.action_mut(action).set(value).expect("should have set action rating");
 
-            assert_eq!(value, character.action(action).expect("should have found action").get());
+            assert_eq!(value, character.action(action).get());
         }
 
         #[test]
@@ -178,12 +181,12 @@ mod tests {
         ) {
             let mut character = Character::new("Test Character");
 
-            match character.action_mut(action).expect("should have found action").set(value).expect_err("should have clamped") {
+            match character.action_mut(action).set(value).expect_err("should have clamped") {
                 ValueError::ClampedMax => assert!(value > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
-            assert_eq!(4, character.action(action).expect("should have found action").get(), "Action rating should clamp precisely to MAX (4)");
+            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
         }
 
         #[test]
@@ -193,12 +196,12 @@ mod tests {
         ) {
             let mut character = Character::new("Test Character");
 
-            match character.action_mut(action).expect("should have found action").increment(increment).expect_err("should have clamped") {
+            match character.action_mut(action).increment(increment).expect_err("should have clamped") {
                 ValueError::ClampedMax => assert!(increment > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
-            assert_eq!(4, character.action(action).expect("should have found action").get(), "Action rating should clamp precisely to MAX (4)");
+            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
         }
 
         #[test]

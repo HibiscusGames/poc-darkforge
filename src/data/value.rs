@@ -28,12 +28,12 @@ pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Ha
     /// Increments the action value by the specified amount.
     ///
     /// Returns `Err(ValueError::Max)` if the action value is already at the maximum.
-    fn increment(&mut self, amount: I) -> Result<(), Error>;
+    fn increment(&mut self, amount: I) -> Result<I, Error>;
 
     /// Decrements the action value by the specified amount.
     ///
     /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
-    fn decrement(&mut self, amount: I) -> Result<(), Error> {
+    fn decrement(&mut self, amount: I) -> Result<I, Error> {
         // Saturating sub avoids underflow when amount > current.
         self.set(self.get().saturating_sub(amount))
     }
@@ -42,7 +42,7 @@ pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Ha
     ///
     /// Returns `Err(ValueError::Max)` if the action value is already at the maximum.
     /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
-    fn set(&mut self, amount: I) -> Result<(), Error>;
+    fn set(&mut self, amount: I) -> Result<I, Error>;
 
     /// Returns the current action value.
     fn get(&self) -> I;
@@ -152,27 +152,46 @@ impl<I: PrimInt + Hash + Debug> Integer<I> {
 
         Ok(Self { min, max, current })
     }
+}
 
-    pub fn increment(&mut self, amount: I) -> Result<(), Error> {
-        self.set(self.get().saturating_add(amount))
+impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
+    fn increment(&mut self, amount: I) -> Result<I, Error> {
+        let target = self.get() + amount;
+        if target > self.max {
+            self.current = self.max;
+            return Err(Error::ClampedMax);
+        }
+
+        self.current = target;
+        Ok(target)
     }
 
-    pub fn decrement(&mut self, amount: I) -> Result<(), Error> {
-        self.set(self.get().saturating_sub(amount))
+    fn decrement(&mut self, amount: I) -> Result<I, Error> {
+        let target = self.get() - amount;
+        if target < self.min {
+            self.current = self.min;
+            return Err(Error::ClampedMin);
+        }
+
+        self.current = target;
+        Ok(target)
     }
 
-    pub fn set(&mut self, amount: I) -> Result<(), Error> {
+    fn set(&mut self, amount: I) -> Result<I, Error> {
         if amount < self.min {
+            self.current = self.min;
             return Err(Error::ClampedMin);
         }
         if amount > self.max {
+            self.current = self.max;
             return Err(Error::ClampedMax);
         }
+
         self.current = amount;
-        Ok(())
+        Ok(amount)
     }
 
-    pub fn get(&self) -> I {
+    fn get(&self) -> I {
         self.current
     }
 }

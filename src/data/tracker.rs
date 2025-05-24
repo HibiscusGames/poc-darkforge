@@ -38,8 +38,8 @@ use thiserror::Error;
 pub enum Error {
     /// Attempted to create a tracker with more items than its capacity.
     ///
-    /// Contains the capacity and the number of items that were attempted to be added.
-    #[error("Too many items, capacity is {0} but {1} were added")]
+    /// Contains the capacity and the number of items that was attempted to be added.
+    #[error("Too many items, capacity is {0} but {1} was added")]
     TooManyItems(usize, usize),
 }
 
@@ -135,7 +135,7 @@ impl<T: Clone + Copy + Eq, const N: usize> Default for ArrayTracker<T, N> {
 impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
     fn append(&mut self, value: T) -> Result<(), Error> {
         if self.is_full() {
-            return Err(Error::TooManyItems(N, N));
+            return Err(Error::TooManyItems(N, 1));
         }
 
         // Find the first empty slot and insert the value
