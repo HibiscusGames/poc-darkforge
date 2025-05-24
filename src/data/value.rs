@@ -1,4 +1,5 @@
 use std::{
+    any::type_name,
     fmt::Debug,
     hash::Hash,
     ops::{Deref, DerefMut},
@@ -75,14 +76,10 @@ impl<I: PrimInt + Unsigned + Hash + Debug + Default, const DEFAULT_MIN: usize, c
     for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
 {
     fn default() -> Self {
-        Self(
-            Integer::new(
-                I::from(DEFAULT_MIN).unwrap_or_default(),
-                I::from(DEFAULT_MAX).unwrap_or_default(),
-                I::from(DEFAULT_MIN).unwrap_or_default(),
-            )
-            .unwrap(),
-        )
+        let min = I::from(DEFAULT_MIN).unwrap_or_else(|| panic!("DEFAULT_MIN ({DEFAULT_MIN}) could not be cast to {:?}", type_name::<I>()));
+        let max = I::from(DEFAULT_MAX).unwrap_or_else(|| panic!("DEFAULT_MAX ({DEFAULT_MAX}) could not be cast to {:?}", type_name::<I>()));
+
+        Self(Integer::new(min, max, I::from(DEFAULT_MIN).unwrap_or_default()).unwrap())
     }
 }
 
@@ -115,14 +112,10 @@ impl<I: PrimInt + Signed + Hash + Debug + Default, const DEFAULT_MIN: isize, con
     for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
 {
     fn default() -> Self {
-        Self(
-            Integer::new(
-                I::from(DEFAULT_MIN).unwrap_or_default(),
-                I::from(DEFAULT_MAX).unwrap_or_default(),
-                I::from(DEFAULT_MIN).unwrap_or_default(),
-            )
-            .unwrap(),
-        )
+        let min = I::from(DEFAULT_MIN).unwrap_or_else(|| panic!("DEFAULT_MIN ({DEFAULT_MIN}) could not be cast to {:?}", type_name::<I>()));
+        let max = I::from(DEFAULT_MAX).unwrap_or_else(|| panic!("DEFAULT_MAX ({DEFAULT_MAX}) could not be cast to {:?}", type_name::<I>()));
+
+        Self(Integer::new(min, max, I::from(DEFAULT_MIN).unwrap_or_default()).unwrap())
     }
 }
 

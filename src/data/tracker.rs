@@ -39,7 +39,7 @@ pub enum Error {
     /// Attempted to create a tracker with more items than its capacity.
     ///
     /// Contains the capacity and the number of items that was attempted to be added.
-    #[error("Too many items, capacity is {0} but {1} was added")]
+    #[error("Too many items: capacity is {0} but length would become {1}")]
     TooManyItems(usize, usize),
 }
 
@@ -81,9 +81,6 @@ pub trait Tracker<T: Clone + Copy + Eq> {
 /// * `N` - The maximum capacity of the tracker (const generic parameter).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ArrayTracker<T: Clone + Copy + Eq, const N: usize> {
-    /// The current number of items in the tracker.
-    count: usize,
-
     /// The internal storage for items, using `Option<T>` to represent presence/absence.
     inner: [Option<T>; N],
 }
@@ -119,10 +116,7 @@ impl<T: Clone + Copy + Eq, const N: usize> ArrayTracker<T, N> {
             inner[i] = *item;
         }
 
-        Ok(Self {
-            count: inner.iter().filter(|x| x.is_some()).count(),
-            inner,
-        })
+        Ok(Self { inner })
     }
 }
 
@@ -135,13 +129,12 @@ impl<T: Clone + Copy + Eq, const N: usize> Default for ArrayTracker<T, N> {
 impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
     fn append(&mut self, value: T) -> Result<(), Error> {
         if self.is_full() {
-            return Err(Error::TooManyItems(N, 1));
+            return Err(Error::TooManyItems(N, N + 1));
         }
 
         for slot in &mut self.inner {
             if slot.is_none() {
                 *slot = Some(value);
-                self.count += 1;
                 return Ok(());
             }
         }
@@ -154,15 +147,15 @@ impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
     }
 
     fn count(&self) -> usize {
-        self.count
+        self.inner.iter().filter_map(|item| *item).count()
     }
 
     fn is_empty(&self) -> bool {
-        self.count == 0
+        self.count() == 0
     }
 
     fn is_full(&self) -> bool {
-        self.count == N
+        self.count() == N
     }
 }
 
