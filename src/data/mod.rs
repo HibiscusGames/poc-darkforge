@@ -2,7 +2,7 @@ pub mod tracker;
 pub mod value;
 
 use thiserror::Error;
-pub use tracker::Tracker;
+pub use tracker::{ArrayTracker, Tracker};
 pub use value::{Integer, SignedInteger, UnsignedInteger, Value};
 
 #[derive(Error, Debug)]

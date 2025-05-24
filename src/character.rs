@@ -8,7 +8,7 @@
 
 use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
-use crate::data::value::UnsignedInteger;
+use crate::data::{ArrayTracker, UnsignedInteger};
 
 const ACTION_MAX: usize = 4;
 const STRESS_MAX: usize = 10;
@@ -90,9 +90,7 @@ pub struct Character {
 type Actions = HashMap<Action, ActionValue>;
 type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 type Stress = UnsignedInteger<u8, 0, STRESS_MAX>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Traumas([Option<Trauma>; 4]);
+type Traumas = ArrayTracker<Trauma, 4>;
 
 impl Character {
     pub fn new(name: &str) -> Self {
@@ -100,26 +98,31 @@ impl Character {
             name: name.to_string(),
             actions: init_actions(),
             stress: Stress::default(),
-            traumas: Traumas([None; 4]),
+            traumas: Traumas::default(),
         }
     }
 
+    /// Returns a reference to the skill rating for the given action.
     pub fn action(&self, action: Action) -> Option<&ActionValue> {
         self.actions.get(&action)
     }
 
+    /// Returns a mutable reference to the skill rating for the given action.
     pub fn action_mut(&mut self, action: Action) -> Option<&mut ActionValue> {
         self.actions.get_mut(&action)
     }
 
+    /// Returns a reference to the stress tracker for the character.
     pub fn stress(&self) -> &Stress {
         &self.stress
     }
 
+    /// Returns a mutable reference to the stress tracker for the character.
     pub fn stress_mut(&mut self) -> &mut Stress {
         &mut self.stress
     }
 
+    /// Returns a reference to the trauma tracker for the character.
     pub fn traumas(&self) -> &Traumas {
         &self.traumas
     }
@@ -148,18 +151,12 @@ fn init_actions() -> Actions {
     actions
 }
 
-impl Traumas {
-    pub fn is_empty(&self) -> bool {
-        self.0.iter().all(|t| t.is_none())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::data::value::Error as ValueError;
+    use crate::data::{Tracker, value::Error as ValueError};
 
     proptest! {
         #[test]
