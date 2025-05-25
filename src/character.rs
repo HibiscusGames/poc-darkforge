@@ -9,15 +9,22 @@
 use std::{
     fmt::Debug,
     hash::Hash,
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut, Range},
 };
 
 use enum_map::{Enum, EnumMap};
+use thiserror::Error;
 
-use crate::data::{ArrayTracker, UnsignedInteger, Value};
+use crate::data::{ArrayTracker, Error as DataError, Tracker, UnsignedInteger, Value};
 
 const ACTION_MAX: usize = 4;
 const STRESS_MAX: usize = 10;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error(transparent)]
+    DataError(#[from] DataError),
+}
 
 #[derive(Clone, Copy, Debug, Enum, PartialEq, Eq, Hash)]
 pub enum Action {
@@ -88,6 +95,142 @@ pub enum HarmLevel {
     Fatal,
 }
 
+/// A specific instance of harm, including the description and severity level.
+///
+/// Harm is stored as a string to allow for custom descriptions and to avoid
+/// having to define a separate enum for each possible harm level.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum HarmType {
+    /// Fatigue represents exhaustion, mental strain or energy depletion. Typically caused by pushing yourself too hard.
+    ///
+    /// Examples
+    /// Lesser: drained, bleary, dizzy
+    /// Moderate: exhausted, sluggish
+    /// Severe: nearing collapse
+    /// Fatal: comatose, organ failure
+    Fatigue,
+    /// Hunger represents the unmet need for food.
+    ///
+    /// Examples
+    /// Lesser: hungry
+    /// Moderate: ravenous, weak
+    /// Severe: starving, emaciated
+    /// Fatal: starved to death
+    Hunger,
+    /// Thirst represents the unmet need for water.
+    ///
+    /// Examples
+    /// Lesser: thirsty
+    /// Moderate: parched, dizzy
+    /// Severe: dehydrated
+    /// Fatal: dessicated
+    Thirst,
+    /// Piercing harm represents damage that penetrates the skin.
+    ///
+    /// Examples
+    /// Lesser: pricked, grazed
+    /// Moderate: stabbed, shot in the arm, shot in the shoulder
+    /// Severe: impaled, shot in the chest, shot in the belly
+    /// Fatal: impaled through the chest, shot in the head
+    Piercing,
+    /// Slashing harm represents damage that cuts the skin.
+    ///
+    /// Examples
+    /// Lesser: cut, scraped
+    /// Moderate: slashed, cut in the arm, cut in the shoulder
+    /// Severe: cut in the chest, cut in the belly, gash to the face
+    /// Fatal: decapitated, slit throat
+    Slashing,
+    /// Blunt harm represents damage that crushes or squeezes the body.
+    ///
+    /// Examples
+    /// Lesser: bruised, swollen
+    /// Moderate: bruised ribs, swollen joint, broken arm
+    /// Severe: shattered arm, broken shoulder, broken ribs
+    /// Fatal: crushed chest, shattered skull
+    Blunt,
+    /// Psychic harm represents damage to the mind. Can be caused by trauma over time, or sometimes suddenly by witnessing so incomprehensible that the mind cracks under the strain.
+    ///
+    /// Examples:
+    /// Lesser: anxious, unsettled by intrusive thoughts
+    /// Moderate: panicky, mild hallucination, mild compulsion
+    /// Severe: paranoia, hallucination, delusion, minor stroke
+    /// Fatal: catatonic, psychotic break, fatal stroke
+    Psychic,
+    /// Fear represents a strong emotional response to danger or threat.
+    ///
+    /// Examples:
+    /// Lesser: startled, shaken
+    /// Moderate: terrified, panicked
+    /// Severe: hysterical, paranoid
+    /// Fatal: catatonic, aneurysm, fatal stroke, heart attack
+    Fear,
+    /// Confusion represents a loss of clarity or coherence.
+    ///
+    /// Examples:
+    /// Lesser: dizzy, distracted
+    /// Moderate: confused, disoriented
+    /// Severe: delirious, forgetful
+    /// Fatal: demented, amnesiac
+    Confusion,
+    /// Charm represents a strong emotional response to attraction or pleasure.
+    ///
+    /// Examples:
+    /// Lesser: distracted, swayed
+    /// Moderate: fixated, infatuated
+    /// Severe: devoted, addicted
+    /// Fatal: severely addicted, fanatical
+    Charm,
+    /// Acid represents damage that corrodes the body.
+    ///
+    /// Examples:
+    /// Lesser: irritated skin, stinging eyes
+    /// Moderate: burned, blistered
+    /// Severe: severely acid burned
+    /// Fatal: fatal acid burns
+    Acid,
+    /// Cold represents damage that freezes the body.
+    ///
+    /// Examples:
+    /// Lesser: chills, shivers
+    /// Moderate: frozen, numb
+    /// Severe: frostbite, hypothermia
+    /// Fatal: frozen to death
+    Cold,
+    /// Fire represents damage that burns the body.
+    ///
+    /// Examples:
+    /// Lesser: scalded, chafed
+    /// Moderate: burned, blistered
+    /// Severe: severely burned, charred
+    /// Fatal: burned to death
+    Fire,
+    /// Electric represents damage that shocks the body.
+    ///
+    /// Examples:
+    /// Lesser: shocked, jolted
+    /// Moderate: burned
+    /// Severe: severely burned, heart attack
+    /// Fatal: electrocuted
+    Electric,
+    /// Poison represents damage that poisons the body.
+    ///
+    /// Examples:
+    /// Lesser: nauseated, dizzy, tight chest
+    /// Moderate: poisoned, cramps, vomiting
+    /// Severe: internal bleeding, nearing collapse, paralysis
+    /// Fatal: organ failure, comatose
+    Poison,
+    /// Disease represents an illness that affects the body.
+    ///
+    /// Examples:
+    /// Lesser: shivers, headaches, mild fever
+    /// Moderate: feverish, chills, weakness, vomiting
+    /// Severe: delirious, severe weakness, collapse
+    /// Fatal: organ failure, fatal illness, permanently disabled
+    Disease,
+}
+
 /// A character represents a member of the crew controlled by the player.
 ///
 /// Characters have:
@@ -107,7 +250,7 @@ pub struct Character {
     /// The trauma tracker for the character.
     traumas: Traumas,
     /// The harm tracker for the character.
-    harm: Harm,
+    harm: HarmTracker,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -115,7 +258,67 @@ struct Actions(EnumMap<Action, ActionValue>);
 type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 type Stress = UnsignedInteger<u8, 0, STRESS_MAX>;
 type Traumas = ArrayTracker<Trauma, 4>;
-type Harm = ArrayTracker<HarmLevel, 6>;
+
+/// A specific instance of harm, including the level and type.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Harm(HarmLevel, HarmType);
+
+/// A specialized tracker for character harm that follows the game's rules for harm slots.
+///
+/// The tracker has 6 slots with specific allocations:
+/// - Slots 0-1: Lesser harm
+/// - Slots 2-3: Moderate harm
+/// - Slot 4: Severe harm
+/// - Slot 5: Fatal harm
+#[derive(Debug, Default, PartialEq)]
+pub struct HarmTracker(ArrayTracker<Harm, 6>);
+
+impl HarmLevel {
+    pub fn range(&self) -> Range<usize> {
+        match self {
+            HarmLevel::Lesser => 0..2,
+            HarmLevel::Moderate => 2..4,
+            HarmLevel::Severe => 4..5,
+            HarmLevel::Fatal => 5..6,
+        }
+    }
+
+    fn up(&self) -> Self {
+        match self {
+            HarmLevel::Lesser => HarmLevel::Moderate,
+            HarmLevel::Moderate => HarmLevel::Severe,
+            HarmLevel::Severe => HarmLevel::Fatal,
+            HarmLevel::Fatal => HarmLevel::Fatal,
+        }
+    }
+}
+
+impl HarmTracker {
+    /// Applies a harm to the character, following the slot allocation rules.
+    ///
+    /// If the slots for the given harm level are full, the harm is upgraded to the next level.
+    /// Returns the actual harm that was applied, which may be different from the input harm
+    /// if an upgrade occurred.
+    pub fn apply(&mut self, Harm(level, kind): &Harm) -> Result<Harm, Error> {
+        let mut harm = Harm(level.clone(), kind.clone());
+
+        let level_count = self.0.list().iter().filter(|h| h.0 == *level).count();
+
+        let level_capacity = match level {
+            HarmLevel::Lesser => 2,
+            HarmLevel::Moderate => 2,
+            HarmLevel::Severe => 1,
+            HarmLevel::Fatal => 1,
+        };
+
+        if level_count >= level_capacity {
+            harm.0 = level.up();
+        }
+
+        self.append(harm.clone())?;
+        Ok(harm)
+    }
+}
 
 impl Character {
     pub fn new(name: &str) -> Self {
@@ -124,7 +327,7 @@ impl Character {
             actions: Actions::default(),
             stress: Stress::default(),
             traumas: Traumas::default(),
-            harm: Harm::default(),
+            harm: HarmTracker::default(),
         }
     }
 
@@ -154,8 +357,13 @@ impl Character {
     }
 
     /// Returns a reference to the character's harm tracker.
-    pub fn harm(&self) -> &Harm {
+    pub fn harm(&self) -> &HarmTracker {
         &self.harm
+    }
+
+    #[cfg(test)]
+    fn harm_mut(&mut self) -> &mut HarmTracker {
+        &mut self.harm
     }
 
     /// Returns true if the character has pending trauma (stress level at maximum)
@@ -178,12 +386,48 @@ impl DerefMut for Actions {
     }
 }
 
+impl Deref for HarmTracker {
+    type Target = ArrayTracker<Harm, 6>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for HarmTracker {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use rand::seq::IndexedRandom;
 
     use super::*;
     use crate::data::{Tracker, value::Error as ValueError};
+
+    const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe, HarmLevel::Fatal];
+
+    const KINDS: &[HarmType] = &[
+        HarmType::Fatigue,
+        HarmType::Hunger,
+        HarmType::Thirst,
+        HarmType::Piercing,
+        HarmType::Slashing,
+        HarmType::Blunt,
+        HarmType::Psychic,
+        HarmType::Fear,
+        HarmType::Confusion,
+        HarmType::Charm,
+        HarmType::Acid,
+        HarmType::Cold,
+        HarmType::Fire,
+        HarmType::Electric,
+        HarmType::Poison,
+        HarmType::Disease,
+    ];
 
     proptest! {
         #[test]
@@ -206,7 +450,7 @@ mod tests {
             let mut character = Character::new("Test Character");
 
             match character.action_mut(action).set(value).expect_err("should have clamped") {
-                ValueError::ClampedMax => assert!(value > 4, "Action rating clamped when it was lower than max"),
+                DataError::Value(ValueError::ClampedMax) => assert!(value > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
@@ -221,7 +465,7 @@ mod tests {
             let mut character = Character::new("Test Character");
 
             match character.action_mut(action).increment(increment).expect_err("should have clamped") {
-                ValueError::ClampedMax => assert!(increment > 4, "Action rating clamped when it was lower than max"),
+                DataError::Value(ValueError::ClampedMax) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
@@ -246,7 +490,7 @@ mod tests {
             let mut character = Character::new("Test Character");
 
             match character.stress_mut().set(stress).expect_err("should have clamped") {
-                ValueError::ClampedMax => assert!(stress > 10, "Stress level clamped when it was lower than max"),
+                DataError::Value(ValueError::ClampedMax) => assert!(stress > 10, "Stress level clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}")
             }
 
@@ -262,11 +506,42 @@ mod tests {
 
             character.stress_mut().set(stress).expect("should have set stress level");
             match character.stress_mut().increment(increment).expect_err("should have clamped") {
-                ValueError::ClampedMax => assert!(stress + increment > STRESS_MAX as u8, "Stress level clamped when it was lower than max ({stress} + {increment} < {STRESS_MAX})"),
+                DataError::Value(ValueError::ClampedMax) => assert!(stress + increment > STRESS_MAX as u8, "Stress level clamped when it was lower than max ({stress} + {increment} < {STRESS_MAX})"),
                 e => panic!("unexpected error: {e:?}")
             }
 
             assert_eq!(STRESS_MAX as u8, character.stress().get(), "Stress level should clamp precisely to MAX ({STRESS_MAX})");
+        }
+
+        #[test]
+        fn test_harm_is_added_to_empty_tracker(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
+            let mut character = Character::new("Test Character");
+            let got = character.harm_mut().apply(&Harm(level, kind.clone())).expect("should have added harm");
+
+            let expected = Harm(level, kind.clone());
+
+            assert_eq!(expected, got);
+            assert_eq!(vec![&expected], character.harm().list());
+        }
+
+        #[test]
+        fn test_harm_is_upgraded_when_tracker_is_full_for_that_level(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
+            let mut character = Character::new("Test Character");
+            let mut expected_harm = vec![];
+            for _ in level.range() {
+                let h = Harm(level, KINDS.choose(&mut rand::rng()).cloned().expect("should have selected a random harm type"));
+                expected_harm.push(h.clone());
+                character.harm_mut().apply(&h).expect("should have applied initial harm");
+            }
+
+            let got = character.harm_mut().apply(&Harm(level, kind.clone())).expect("should have added harm");
+
+            let expected = Harm(level.up(), kind.clone());
+            expected_harm.push(expected.clone());
+            let got_harm: Vec<Harm> = character.harm().list().into_iter().cloned().collect();
+
+            assert_eq!(expected, got);
+            assert_eq!(expected_harm, got_harm);
         }
     }
 

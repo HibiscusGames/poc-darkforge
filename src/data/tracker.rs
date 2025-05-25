@@ -31,7 +31,14 @@
 //! implementation. The primary implementation is `ArrayTracker`, which uses a fixed-size array to
 //! store items efficiently.
 
+use std::{
+    ops::{Index, IndexMut},
+    slice::SliceIndex,
+};
+
 use thiserror::Error;
+
+use super::{Result, Tracker};
 
 /// Errors that can occur when working with trackers.
 #[derive(Error, Debug)]
@@ -41,29 +48,6 @@ pub enum Error {
     /// Contains the capacity and the number of items that was attempted to be added.
     #[error("Too many items: capacity is {0} but length would become {1}")]
     TooManyItems(usize, usize),
-}
-
-/// Defines the core operations for tracking a collection of items with a fixed capacity.
-///
-/// This trait provides a common interface for different tracker implementations,
-/// allowing them to be used interchangeably in code that needs to track items.
-pub trait Tracker<T: Clone + Copy + Eq> {
-    /// Adds a new item to the tracker.
-    ///
-    /// If the tracker is already full, the item will not be added.
-    fn append(&mut self, value: T) -> Result<(), Error>;
-
-    /// Returns a vector containing all items currently in the tracker.
-    fn list(&self) -> Vec<T>;
-
-    /// Returns the number of items currently in the tracker.
-    fn count(&self) -> usize;
-
-    /// Returns true if the tracker contains no items.
-    fn is_empty(&self) -> bool;
-
-    /// Returns true if the tracker is at full capacity.
-    fn is_full(&self) -> bool;
 }
 
 /// An implementation of `Tracker` that uses a fixed-size array to store items.
@@ -77,15 +61,15 @@ pub trait Tracker<T: Clone + Copy + Eq> {
 ///
 /// # Type Parameters
 ///
-/// * `T` - The type of items being tracked. Must implement `Clone`, `Copy`, and `Eq`.
+/// * `T` - The type of items being tracked. Must implement `Clone` and `Eq`.
 /// * `N` - The maximum capacity of the tracker (const generic parameter).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ArrayTracker<T: Clone + Copy + Eq, const N: usize> {
+pub struct ArrayTracker<T: Clone + Eq, const N: usize> {
     /// The internal storage for items, using `Option<T>` to represent presence/absence.
     inner: [Option<T>; N],
 }
 
-impl<T: Clone + Copy + Eq, const N: usize> ArrayTracker<T, N> {
+impl<T: Clone + Eq, const N: usize> ArrayTracker<T, N> {
     /// Creates a new `ArrayTracker` initialized with the given items.
     ///
     /// # Arguments
@@ -106,30 +90,30 @@ impl<T: Clone + Copy + Eq, const N: usize> ArrayTracker<T, N> {
     /// let tracker = ArrayTracker::<i32, 4>::new(&[Some(1), Some(2), None, Some(4)]).unwrap();
     /// assert_eq!(3, tracker.count());
     /// ```
-    pub fn new(input: &[Option<T>]) -> Result<Self, Error> {
+    pub fn new(input: &[Option<T>]) -> Result<Self> {
         if input.len() > N {
-            return Err(Error::TooManyItems(N, input.len()));
+            return Err(Error::TooManyItems(N, input.len()).into());
         }
 
-        let mut inner = [None; N];
+        let mut inner = [const { None }; N];
         for (i, item) in input.iter().enumerate() {
-            inner[i] = *item;
+            inner[i] = item.clone();
         }
 
         Ok(Self { inner })
     }
 }
 
-impl<T: Clone + Copy + Eq, const N: usize> Default for ArrayTracker<T, N> {
+impl<T: Clone + Eq, const N: usize> Default for ArrayTracker<T, N> {
     fn default() -> Self {
         Self::new(&[]).unwrap()
     }
 }
 
-impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
-    fn append(&mut self, value: T) -> Result<(), Error> {
+impl<T: Clone + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
+    fn append(&mut self, value: T) -> Result<()> {
         if self.is_full() {
-            return Err(Error::TooManyItems(N, N + 1));
+            return Err(Error::TooManyItems(N, N + 1).into());
         }
 
         for slot in &mut self.inner {
@@ -142,12 +126,12 @@ impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
         unreachable!("No empty slot found despite is_full() check");
     }
 
-    fn list(&self) -> Vec<T> {
-        self.inner.iter().filter_map(|item| *item).collect()
+    fn list(&self) -> Vec<&T> {
+        self.inner.iter().filter_map(|item| item.as_ref()).collect()
     }
 
     fn count(&self) -> usize {
-        self.inner.iter().filter_map(|item| *item).count()
+        self.inner.iter().filter(|item| item.is_some()).count()
     }
 
     fn is_empty(&self) -> bool {
@@ -156,6 +140,25 @@ impl<T: Clone + Copy + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
 
     fn is_full(&self) -> bool {
         self.count() == N
+    }
+}
+
+impl<T: Clone + Eq, const N: usize, IDX> Index<IDX> for ArrayTracker<T, N>
+where
+    IDX: SliceIndex<[Option<T>]>,
+{
+    type Output = IDX::Output;
+    fn index(&self, index: IDX) -> &Self::Output {
+        &self.inner[index]
+    }
+}
+
+impl<T: Clone + Eq, const N: usize, IDX> IndexMut<IDX> for ArrayTracker<T, N>
+where
+    IDX: SliceIndex<[Option<T>]>,
+{
+    fn index_mut(&mut self, index: IDX) -> &mut Self::Output {
+        &mut self.inner[index]
     }
 }
 
@@ -194,8 +197,8 @@ pub mod test {
             assert_eq!(expected_count, tracker.count());
 
             // Check that the items list contains the values we expect
-            let mut expected_items = vec![0; init as usize];
-            expected_items.push(1);
+            let mut expected_items = vec![&0u8; init as usize];
+            expected_items.push(&1u8);
             assert_eq!(expected_items, tracker.list());
         }
 
