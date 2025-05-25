@@ -73,6 +73,21 @@ pub enum Trauma {
     Vicious,
 }
 
+/// Represents physical injuries a character can sustain during play.
+///
+/// Harm is tracked at different severity levels, and too much harm can put a character out of action.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HarmLevel {
+    /// Minor harm, ex: Battered, Drained, Distracted, Scared, Confused.
+    Lesser,
+    /// Moderate harm, ex: Exhausted, Deep Cut to Arm, Concussion, Panicked, Seduced.
+    Moderate,
+    /// Severe harm, ex: Impaled, Broken Leg, Shot in Chest, Badly Burned, Terrified.
+    Severe,
+    /// Fatal harm, ex: Electrocuted, Drowned, Stabbed in the Heart.
+    Fatal,
+}
+
 /// A character represents a member of the crew controlled by the player.
 ///
 /// Characters have:
@@ -91,6 +106,8 @@ pub struct Character {
     stress: Stress,
     /// The trauma tracker for the character.
     traumas: Traumas,
+    /// The harm tracker for the character.
+    harm: Harm,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -98,6 +115,7 @@ struct Actions(EnumMap<Action, ActionValue>);
 type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 type Stress = UnsignedInteger<u8, 0, STRESS_MAX>;
 type Traumas = ArrayTracker<Trauma, 4>;
+type Harm = ArrayTracker<HarmLevel, 6>;
 
 impl Character {
     pub fn new(name: &str) -> Self {
@@ -106,6 +124,7 @@ impl Character {
             actions: Actions::default(),
             stress: Stress::default(),
             traumas: Traumas::default(),
+            harm: Harm::default(),
         }
     }
 
@@ -132,6 +151,11 @@ impl Character {
     /// Returns a reference to the trauma tracker for the character.
     pub fn traumas(&self) -> &Traumas {
         &self.traumas
+    }
+
+    /// Returns a reference to the character's harm tracker.
+    pub fn harm(&self) -> &Harm {
+        &self.harm
     }
 
     /// Returns true if the character has pending trauma (stress level at maximum)
@@ -267,5 +291,12 @@ mod tests {
         let character = Character::new("Test Character");
 
         assert!(character.traumas().is_empty());
+    }
+
+    #[test]
+    fn test_new_character_has_empty_harm_tracker() {
+        let character = Character::new("Test Character");
+
+        assert!(character.harm().is_empty());
     }
 }
