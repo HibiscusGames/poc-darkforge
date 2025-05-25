@@ -6,9 +6,5 @@ command = ["mise", "run", "dev:impl"]
 need_stdout = true
 allow_warnings = true
 
-[jobs.build]
-command = ["mise", "run", "build:examples"]
-
 [keybindings]
-v = "job:dev"
-b = "job:build"
+d = "job:dev"
