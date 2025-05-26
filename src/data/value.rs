@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use super::{Result, Value};
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     /// The value is at the maximum.
     #[error("value clamped to max")]

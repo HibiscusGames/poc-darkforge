@@ -8,7 +8,7 @@ use thiserror::Error;
 pub use tracker::ArrayTracker;
 pub use value::{Integer, SignedInteger, UnsignedInteger};
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("transparent")]
     Value(#[from] value::Error),

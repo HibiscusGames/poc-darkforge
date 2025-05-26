@@ -41,7 +41,7 @@ use thiserror::Error;
 use super::{Result, Tracker};
 
 /// Errors that can occur when working with trackers.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     /// Attempted to create a tracker with more items than its capacity.
     ///
