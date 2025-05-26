@@ -24,6 +24,14 @@ const STRESS_MAX: usize = 10;
 pub enum Error {
     #[error(transparent)]
     DataError(#[from] DataError),
+    #[error(transparent)]
+    HarmError(#[from] HarmError),
+}
+
+#[derive(Debug, Error)]
+pub enum HarmError {
+    #[error("Character is dead, they cannot be harmed nor healed")]
+    AlreadyDead,
 }
 
 #[derive(Clone, Copy, Debug, Enum, PartialEq, Eq, Hash)]
@@ -99,7 +107,7 @@ pub enum HarmLevel {
 ///
 /// Harm is stored as a string to allow for custom descriptions and to avoid
 /// having to define a separate enum for each possible harm level.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HarmType {
     /// Fatigue represents exhaustion, mental strain or energy depletion. Typically caused by pushing yourself too hard.
     ///
@@ -260,7 +268,7 @@ type Stress = UnsignedInteger<u8, 0, STRESS_MAX>;
 type Traumas = ArrayTracker<Trauma, 4>;
 
 /// A specific instance of harm, including the level and type.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Harm(HarmLevel, HarmType);
 
 /// A specialized tracker for character harm that follows the game's rules for harm slots.
@@ -291,6 +299,15 @@ impl HarmLevel {
             HarmLevel::Fatal => HarmLevel::Fatal,
         }
     }
+
+    fn down(&self) -> Option<Self> {
+        match self {
+            HarmLevel::Lesser => None,
+            HarmLevel::Moderate => Some(HarmLevel::Lesser),
+            HarmLevel::Severe => Some(HarmLevel::Moderate),
+            HarmLevel::Fatal => Some(HarmLevel::Severe),
+        }
+    }
 }
 
 impl HarmTracker {
@@ -299,11 +316,9 @@ impl HarmTracker {
     /// If the slots for the given harm level are full, the harm is upgraded to the next level.
     /// Returns the actual harm that was applied, which may be different from the input harm
     /// if an upgrade occurred.
-    pub fn apply(&mut self, Harm(level, kind): &Harm) -> Result<Harm, Error> {
-        let mut harm = Harm(level.clone(), kind.clone());
-
-        let level_count = self.0.list().iter().filter(|h| h.0 == *level).count();
-
+    pub fn apply(&mut self, harm: Harm) -> Result<Harm, Error> {
+        let Harm(level, kind) = harm;
+        let level_count = self.list().into_iter().filter(|h| h.0 == level).count();
         let level_capacity = match level {
             HarmLevel::Lesser => 2,
             HarmLevel::Moderate => 2,
@@ -311,12 +326,45 @@ impl HarmTracker {
             HarmLevel::Fatal => 1,
         };
 
-        if level_count >= level_capacity {
-            harm.0 = level.up();
+        if level_count >= level_capacity && level == HarmLevel::Fatal {
+            Err(Error::HarmError(HarmError::AlreadyDead))
+        } else if level_count >= level_capacity {
+            self.apply(Harm(level.up(), kind))
+        } else {
+            self.append(harm)?;
+            Ok(harm)
+        }
+    }
+
+    /// Removes all harm by downgrading each harm by one level.
+    ///
+    /// Lesser harm is completely removed, while higher level harm is downgraded.
+    /// Returns the number of harm items that were downgraded or removed.
+    pub fn heal(&mut self) -> Result<usize, Error> {
+        // Get the current harms
+        let current_harms = self.0.list();
+        if current_harms.is_empty() {
+            return Ok(0);
         }
 
-        self.append(harm.clone())?;
-        Ok(harm)
+        // Create a new tracker with downgraded harms
+        let mut new_tracker = ArrayTracker::<Harm, 6>::default();
+        let mut count = 0;
+
+        for &harm in current_harms {
+            let Harm(level, kind) = harm;
+
+            // If it can be downgraded, add the downgraded version
+            if let Some(downgraded_level) = level.down() {
+                new_tracker.append(Harm(downgraded_level, kind))?;
+            }
+
+            count += 1;
+        }
+
+        self.0 = new_tracker;
+
+        Ok(count)
     }
 }
 
@@ -404,11 +452,12 @@ impl DerefMut for HarmTracker {
 mod tests {
     use proptest::prelude::*;
     use rand::seq::IndexedRandom;
+    use rstest::rstest;
 
     use super::*;
     use crate::data::{Tracker, value::Error as ValueError};
 
-    const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe, HarmLevel::Fatal];
+    const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe];
 
     const KINDS: &[HarmType] = &[
         HarmType::Fatigue,
@@ -516,12 +565,12 @@ mod tests {
         #[test]
         fn test_harm_is_added_to_empty_tracker(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
             let mut character = Character::new("Test Character");
-            let got = character.harm_mut().apply(&Harm(level, kind.clone())).expect("should have added harm");
+            let got = character.harm_mut().apply(Harm(level, kind.clone())).expect("should have added harm");
 
             let expected = Harm(level, kind.clone());
 
             assert_eq!(expected, got);
-            assert_eq!(vec![&expected], character.harm().list());
+            assert_eq!(vec![expected], character.harm().list().into_iter().cloned().collect::<Vec<_>>());
         }
 
         #[test]
@@ -531,18 +580,57 @@ mod tests {
             for _ in level.range() {
                 let h = Harm(level, KINDS.choose(&mut rand::rng()).cloned().expect("should have selected a random harm type"));
                 expected_harm.push(h.clone());
-                character.harm_mut().apply(&h).expect("should have applied initial harm");
+                character.harm_mut().apply(h).expect("should have applied initial harm");
             }
 
-            let got = character.harm_mut().apply(&Harm(level, kind.clone())).expect("should have added harm");
+            let got = character.harm_mut().apply(Harm(level, kind)).expect("should have added harm");
 
-            let expected = Harm(level.up(), kind.clone());
+            let expected = Harm(level.up(), kind);
             expected_harm.push(expected.clone());
             let got_harm: Vec<Harm> = character.harm().list().into_iter().cloned().collect();
 
             assert_eq!(expected, got);
             assert_eq!(expected_harm, got_harm);
         }
+    }
+
+    #[rstest]
+    #[case::one_of_each_except_fatal(
+        vec![Harm(HarmLevel::Severe, HarmType::Blunt), Harm(HarmLevel::Moderate, HarmType::Piercing), Harm(HarmLevel::Lesser, HarmType::Fatigue)],
+        vec![Harm(HarmLevel::Moderate, HarmType::Blunt), Harm(HarmLevel::Lesser, HarmType::Piercing)]
+    )]
+    #[case::saturated_tracker_except_fatal(
+        vec![Harm(HarmLevel::Severe, HarmType::Blunt), Harm(HarmLevel::Moderate, HarmType::Piercing), Harm(HarmLevel::Moderate, HarmType::Slashing), Harm(HarmLevel::Lesser, HarmType::Fatigue), Harm(HarmLevel::Lesser, HarmType::Hunger)],
+        vec![Harm(HarmLevel::Moderate, HarmType::Blunt), Harm(HarmLevel::Lesser, HarmType::Piercing), Harm(HarmLevel::Lesser, HarmType::Slashing)]
+    )]
+    #[case::severe_harm_only(
+        vec![Harm(HarmLevel::Severe, HarmType::Blunt)],
+        vec![Harm(HarmLevel::Moderate, HarmType::Blunt)])]
+    #[case::moderate_harm_only(
+        vec![Harm(HarmLevel::Moderate, HarmType::Piercing), Harm(HarmLevel::Moderate, HarmType::Slashing)],
+        vec![Harm(HarmLevel::Lesser, HarmType::Piercing), Harm(HarmLevel::Lesser, HarmType::Slashing)]
+    )]
+    #[case::lesser_harm_only(
+        vec![Harm(HarmLevel::Lesser, HarmType::Fatigue), Harm(HarmLevel::Lesser, HarmType::Hunger)],
+        vec![]
+    )]
+    fn test_heal_downgrades_all_harm_and_removes_lesser_harm(#[case] initial_harms: Vec<Harm>, #[case] expected_harms: Vec<Harm>) {
+        let mut character = Character::new("Test Character");
+        for harm in &initial_harms {
+            character.harm_mut().apply(*harm).expect("should have added harm");
+        }
+        assert_eq!(initial_harms.len(), character.harm().count());
+
+        character.harm_mut().heal().expect("should have healed harm");
+        assert_eq!(expected_harms.len(), character.harm().count());
+
+        let got_harm: Vec<Harm> = character.harm().list().into_iter().cloned().collect();
+
+        for expected_harm in &expected_harms {
+            assert!(got_harm.contains(expected_harm), "Expected harm {expected_harm:?} not found");
+        }
+
+        assert_eq!(got_harm.len(), expected_harms.len(), "Got unexpected number of harms after removal");
     }
 
     #[test]
