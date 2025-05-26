@@ -129,6 +129,7 @@
     "MSIX",
     "msvc",
     "Navi",
+    "nextest",
     "Notarisation",
     "Nygard",
     "objc",
@@ -197,6 +198,7 @@
     "Windrider",
     "windsurfrules",
     "wrapp",
+    "xwin",
     "Zeroable"
   ]
 }
