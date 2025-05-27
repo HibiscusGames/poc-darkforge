@@ -31,11 +31,6 @@
 //! implementation. The primary implementation is `ArrayTracker`, which uses a fixed-size array to
 //! store items efficiently.
 
-use std::{
-    ops::{Index, IndexMut},
-    slice::SliceIndex,
-};
-
 use thiserror::Error;
 
 use super::{Result, Tracker};
@@ -140,25 +135,6 @@ impl<T: Clone + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
 
     fn is_full(&self) -> bool {
         self.count() == N
-    }
-}
-
-impl<T: Clone + Eq, const N: usize, IDX> Index<IDX> for ArrayTracker<T, N>
-where
-    IDX: SliceIndex<[Option<T>]>,
-{
-    type Output = IDX::Output;
-    fn index(&self, index: IDX) -> &Self::Output {
-        &self.inner[index]
-    }
-}
-
-impl<T: Clone + Eq, const N: usize, IDX> IndexMut<IDX> for ArrayTracker<T, N>
-where
-    IDX: SliceIndex<[Option<T>]>,
-{
-    fn index_mut(&mut self, index: IDX) -> &mut Self::Output {
-        &mut self.inner[index]
     }
 }
 
