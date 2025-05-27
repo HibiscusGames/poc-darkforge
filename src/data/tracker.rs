@@ -113,7 +113,7 @@ impl<T: Clone + Eq, const N: usize> Default for ArrayTracker<T, N> {
 impl<T: Clone + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
     fn append(&mut self, value: T) -> Result<()> {
         if self.is_full() {
-            return Err(Error::TooManyItems(N, N + 1).into());
+            return Err(Error::TooManyItems(N, self.count() + 1).into());
         }
 
         for slot in &mut self.inner {
