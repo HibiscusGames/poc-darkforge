@@ -1,0 +1,21 @@
+[tools.bun]
+version = "1.2.14"
+backend = "core:bun"
+
+[tools.bun.checksums]
+"bun-linux-x64-baseline.zip" = "sha256:8590c16b934317401b69eae06109d36c399d64b041386b892f39bf75969abe12"
+
+[tools.gh]
+version = "2.73.0"
+backend = "aqua:cli/cli"
+
+[tools.gh.checksums]
+"gh_2.73.0_linux_amd64.tar.gz" = "sha256:9ebc6b751ee182fdb291ceb2213cc17abb1624b30f6d7a3913097af41f48b1b4"
+
+[tools."go:github.com/evilmartians/lefthook"]
+version = "1.11.13"
+backend = "go:github.com/evilmartians/lefthook"
+
+[tools.markdownlint-cli2]
+version = "0.17.2"
+backend = "npm:markdownlint-cli2"

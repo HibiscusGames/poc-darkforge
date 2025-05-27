@@ -2,7 +2,10 @@
 name = "darkforge-poc"
 version = "0.1.0"
 edition = "2021"
-authors = ["Pierre Fouilloux","Hibiscus Games <https://github.com/HibiscusGames>"]
+authors = [
+  "Pierre Fouilloux",
+  "Hibiscus Games <https://github.com/HibiscusGames>",
+]
 description = "A proof of concept CLI for testing the mechanics of the Blades in the Dark SRD by One Seven Design."
 license = "AGPL-3.0-or-later"
 readme = "README.md"
@@ -18,17 +21,21 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
+derive_builder = "0.20.2"
+enum-map = "2.7.3"
+num-traits = "0.2.19"
 rand = "0.9"
 thiserror = "2.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"
+ paste2 = "1.1.1"
 predicates = "3.1"
 proptest = "1.6"
 rstest = "0.25"
 
 [profile.dev]
-opt-level = 1  # Better performance while debugging
+opt-level = 1 # Better performance while debugging
 
 [profile.release]
 lto = true

@@ -1,7 +1,7 @@
 [tools]
 markdownlint-cli2 = "0.17.2"
-gh = "2.72.0"
-bun = "1.2.13"
+gh = "2.73.0"
+bun = "1.2.14"
 "go:github.com/evilmartians/lefthook" = "1.11.13"
 
 [task_config]
@@ -35,7 +35,6 @@ run = "bacon dev"
 [tasks."dev:impl"]
 hide = true
 depends = ["fmt", "lint", "test"]
-run = "mise run build:examples"
 
 [tasks.fmt]
 description = "Run all formatting tasks"
@@ -59,11 +58,11 @@ depends = ["test:debug"]
 
 [tasks."test:debug"]
 description = "Run all tests in debug mode"
-run = "cargo test"
+run = "cross nextest run --all --all-features --all-targets"
 
 [tasks."test:release"]
 description = "Run all tests in release mode"
-run = "cargo test --release"
+run = "cross nextest run --all --all-features --all-targets --release"
 
 [tasks."build"]
 description = "Build all libraries in debug mode"

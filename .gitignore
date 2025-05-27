@@ -1,90 +1,28 @@
-##### Deny all #####
+####### Deny all ########
 *
 
-###### Code ########
-!Cargo.lock
-!Cargo.toml
-!Cross.toml
-!config.toml
-!bacon.toml
-!rust-toolchain.toml
-!*.rs
-!*.jsonc
-
-!.cargo/
-!**/src
-
-!bun.lock
-!tsconfig.json
-!package-lock.json
-
-##### Linters ######
+#### Allowed folders ####
 !.config
-!.linters
-# Commits
-!.czrc
-!commitlint.config.ts
-# Markdown
-!.markdownlint-cli2.jsonc
-# Spelling
-!.cspell.json
-# Rust
-!.clippy.toml
-!.rustfmt.toml
-# JS/TS
-!.prettierignore
+!.github
+!.windsurf
 
-## Documentation ###
-!docs
-!docs/**/
-!*.md
-!README.md
+!proptest-regressions
+!src
 
-#### Workspace #####
+##### Allowed files #####
 !.editorconfig
-!.gitignore
 !.gitattributes
+!.gitignore
 !.lefthook.yml
 !.mise.toml
-!tasks.*.toml
-!tasks.toml
-!package.json
-
-##### Pipeline #####
-!.github
-!.github/workflows
-# Github Actions
-!CODEOWNERS
-!renovate.yaml
-!renovate.json
-!renovate.config.js
-!rust-lint.yml
-!scorecard.yaml
-
-######## AI ########
+!.mise.lock
 !.windsurfrules
-!.windsurf/
-!.windsurf/workflows/
-!.windsurf/workflows/*.md
-
-#### Directories ###
-!src/action
-!src/roll
-!data/
-!examples/
-
-##### Licenses #####
-!/.attribution
-!/.attribution/**/
+!bacon.toml
+!bun.lock
+!Cargo.lock
+!Cargo.toml
+!commitlint.config.ts
 !LICENCE
-!*.txt
-
-#### LFS Assets ####
-!**/*.png
-!**/*.svg
-!**/*.ico
-!**/*.icns
-
-# Explicit Ignores #
-**/node_modules
-**/target
+!package.json
+!README.md
+!rust-toolchain.toml
