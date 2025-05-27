@@ -12,10 +12,20 @@ pre-commit:
   piped: true
   jobs:
     - name: "Run formatters"
-      run: mise run fmt
+      run: mask fmt
       stage_fixed: true
     - name: "Run linters"
-      run: mise run lint
+      run: mask lint
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: "Run check"
+      run: mask check
+    - name: "Run tests"
+      run: mask test
+    - name: "Run audit"
+      run: mask audit
 
 commit-msg:
   piped: true

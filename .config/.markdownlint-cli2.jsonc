@@ -14,8 +14,10 @@
 		"MD029": {
 			"style": "one_or_ordered"
 		},
+    "MD032": false,
 		"MD033": {
 			"allowed_elements": ["img"]
-		}
+		},
+		"MD036": false
 	}
 }

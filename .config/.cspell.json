@@ -124,6 +124,7 @@
     "linters",
     "locid",
     "markdownlint",
+    "maskfile",
     "mdbook",
     "metaprogramming",
     "Mistveil",

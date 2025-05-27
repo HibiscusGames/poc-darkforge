@@ -568,9 +568,9 @@ mod tests {
         #[test]
         fn test_harm_is_added_to_empty_tracker(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
             let mut character = Character::new("Test Character");
-            let got = character.harm_mut().apply(Harm(level, kind.clone())).expect("should have added harm");
+            let got = character.harm_mut().apply(Harm(level, kind)).expect("should have added harm");
 
-            let expected = Harm(level, kind.clone());
+            let expected = Harm(level, kind);
 
             assert_eq!(expected, got);
             assert_eq!(vec![expected], character.harm().list().into_iter().cloned().collect::<Vec<_>>());
@@ -582,14 +582,14 @@ mod tests {
             let mut expected_harm = vec![];
             for _ in level.range() {
                 let h = Harm(level, KINDS.choose(&mut rand::rng()).cloned().expect("should have selected a random harm type"));
-                expected_harm.push(h.clone());
+                expected_harm.push(h);
                 character.harm_mut().apply(h).expect("should have applied initial harm");
             }
 
             let got = character.harm_mut().apply(Harm(level, kind)).expect("should have added harm");
 
             let expected = Harm(level.up(), kind);
-            expected_harm.push(expected.clone());
+            expected_harm.push(expected);
             let got_harm: Vec<Harm> = character.harm().list().into_iter().cloned().collect();
 
             assert_eq!(expected, got);
