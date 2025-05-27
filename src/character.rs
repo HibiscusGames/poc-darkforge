@@ -454,7 +454,7 @@ impl DerefMut for HarmTracker {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
-    use rand::seq::IndexedRandom;
+    use rand::prelude::*;
     use rstest::rstest;
 
     use super::*;

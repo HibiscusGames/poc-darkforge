@@ -59,7 +59,7 @@ impl<I: PrimInt + Unsigned + Hash + Debug + Default, const DEFAULT_MIN: usize, c
         let min = I::from(DEFAULT_MIN).unwrap_or_else(|| panic!("DEFAULT_MIN ({DEFAULT_MIN}) could not be cast to {:?}", type_name::<I>()));
         let max = I::from(DEFAULT_MAX).unwrap_or_else(|| panic!("DEFAULT_MAX ({DEFAULT_MAX}) could not be cast to {:?}", type_name::<I>()));
 
-        Self(Integer::new(min, max, I::from(DEFAULT_MIN).unwrap_or_default()).unwrap())
+        Self(Integer::new(min, max, min).unwrap())
     }
 }
 
@@ -95,7 +95,7 @@ impl<I: PrimInt + Signed + Hash + Debug + Default, const DEFAULT_MIN: isize, con
         let min = I::from(DEFAULT_MIN).unwrap_or_else(|| panic!("DEFAULT_MIN ({DEFAULT_MIN}) could not be cast to {:?}", type_name::<I>()));
         let max = I::from(DEFAULT_MAX).unwrap_or_else(|| panic!("DEFAULT_MAX ({DEFAULT_MAX}) could not be cast to {:?}", type_name::<I>()));
 
-        Self(Integer::new(min, max, I::from(DEFAULT_MIN).unwrap_or_default()).unwrap())
+        Self(Integer::new(min, max, min).unwrap())
     }
 }
 

@@ -10,9 +10,9 @@ pub use value::{Integer, SignedInteger, UnsignedInteger};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("transparent")]
+    #[error(transparent)]
     Value(#[from] value::Error),
-    #[error("transparent")]
+    #[error(transparent)]
     Tracker(#[from] tracker::Error),
 }
 
