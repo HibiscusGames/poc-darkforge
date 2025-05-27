@@ -3,8 +3,10 @@
 
 #### Allowed folders ####
 !.config
+!.cargo
 !.github
 !.windsurf
+!.tools
 
 !proptest-regressions
 !src

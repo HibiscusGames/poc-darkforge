@@ -1,8 +1,9 @@
 [tools]
-markdownlint-cli2 = "0.17.2"
-gh = "2.73.0"
 bun = "1.2.14"
+cargo-binstall = "1.12.5"
 "go:github.com/evilmartians/lefthook" = "1.11.13"
+markdownlint-cli2 = "0.18.1"
+mask = "0.11.6"
 
 [task_config]
 includes = [
@@ -10,8 +11,6 @@ includes = [
   ".config/tasks.rs.toml",
   ".config/tasks.ts.toml",
   ".config/tasks.ex.toml",
-  "examples/hungry_goblins/tasks.toml",
-  "examples/orcnpie/tasks.toml",
 ]
 
 [vars]
@@ -25,7 +24,7 @@ description = "Bootstrap the project"
 run = """
   bun install && \
   lefthook install && \
-  cargo install cargo-xwin xwin cargo-audit
+  cargo bin -i
 """
 
 [tasks.dev]
