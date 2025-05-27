@@ -35,6 +35,12 @@ jobs:
       with:
         fetch-depth: 2
 
+    # Set environment variables
+    - name: Set up environment
+      if: matrix.language == 'rust'
+      run: |
+        echo "CODEQL_ENABLE_EXPERIMENTAL_FEATURES=true" >> $GITHUB_ENV
+
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
@@ -51,15 +57,9 @@ jobs:
       if: matrix.language == 'rust' # Only run autobuild for Rust
       uses: github/codeql-action/autobuild@v3
 
-    # Run the actual analysis
+    # Run the actual analysis and upload results
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
-        category: "/language:${{matrix.language}}"
-
-    # Upload results to GitHub Security tab
-    - name: Upload results to GitHub Security
-      if: success() || failure()
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        category: "${{ matrix.language }}"
+        category: "${{ matrix.language }}-analysis"
+        upload: true
