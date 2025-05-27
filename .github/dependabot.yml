@@ -1,0 +1,56 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Enable version updates for Rust
+  - package-ecosystem: "cargo"
+    # Look for Cargo.toml in the root directory
+    directory: "/"
+    # Check for updates once a day
+    schedule:
+      interval: "daily"
+    # Apply labels to all dependabot PRs
+    labels:
+      - "dependencies"
+    # Auto-approve minor and patch updates
+    # (requires GitHub Actions or similar for auto-merge)
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    # Group updates to reduce PR noise
+    groups:
+      # Group all patch and minor updates together
+      cargo-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "github-actions"
+      - "dependencies"
