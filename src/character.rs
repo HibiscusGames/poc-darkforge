@@ -1,5 +1,4 @@
 //! Implements a character sheet, including actions, harm, trauma, stress, etc.
-//! Implements a character sheet, including actions, harm, trauma, stress, etc.
 use std::{
     fmt::{Debug, Display},
     hash::Hash,
