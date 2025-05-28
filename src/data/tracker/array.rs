@@ -39,7 +39,7 @@ impl<T: Clone + Debug + Display + Eq, const N: usize> ArrayTracker<T, N> {
     /// # Examples
     ///
     /// ```
-    /// use darkforge::data::tracker::{ArrayTracker, Tracker};
+    /// # use darkforge::data::tracker::{Tracker, ArrayTracker};
     ///
     /// // Create a tracker with some initial values
     /// let tracker = ArrayTracker::<i32, 4>::new(&[Some(1), Some(2), None, Some(4)]).unwrap();
