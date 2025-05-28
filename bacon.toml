@@ -2,7 +2,7 @@ default_job = "dev"
 env.CARGO_TERM_COLOR = "always"
 
 [jobs.dev]
-command = ["mise", "run", "dev:impl"]
+command = ["mask", "dev"]
 need_stdout = true
 allow_warnings = true
 
