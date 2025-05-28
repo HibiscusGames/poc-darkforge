@@ -8,7 +8,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    action::{Action, ActionValue, Actions},
+    action::Actions,
     data::{ArrayTracker, Error as DataError, Tracker, UnsignedInteger, Value},
 };
 
@@ -342,14 +342,14 @@ impl<ACT: Actions> Character<ACT> {
         }
     }
 
-    /// Returns a reference to the skill rating for the given action.
-    pub fn action(&self, action: Action) -> u8 {
-        self.actions.get(action)
+    /// Returns a reference to the action ratings for the character
+    pub fn actions(&self) -> &ACT {
+        &self.actions
     }
 
-    /// Returns a mutable reference to the skill rating for the given action.
-    pub fn action_mut(&mut self, action: Action) -> &mut ActionValue {
-        self.actions.get_mut(action)
+    /// Returns a mutable reference to the action ratings for the character.
+    pub fn actions_mut(&mut self) -> &mut ACT {
+        &mut self.actions
     }
 
     /// Returns a reference to the stress tracker for the character.

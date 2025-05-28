@@ -18,12 +18,14 @@ use enum_map::{Enum, EnumMap};
 use thiserror::Error;
 
 pub use crate::action::{effect::Effect, position::Position};
-use crate::data::{UnsignedInteger, Value};
+use crate::data::{Error as DataError, UnsignedInteger, Value};
 
 const ACTION_MAX: usize = 4;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ActionError {
+    #[error(transparent)]
+    ValueError(#[from] DataError),
     #[error("cannot decrease position below {0:?}")]
     PositionClampedLow(Position),
     #[error("cannot increase position above {0:?}")]
@@ -68,7 +70,8 @@ pub enum Action {
 
 pub trait Actions: Debug + Default + PartialEq {
     fn get(&self, action: Action) -> u8;
-    fn get_mut(&mut self, action: Action) -> &mut ActionValue;
+    fn set(&mut self, action: Action, value: u8) -> Result<u8>;
+    fn increment(&mut self, action: Action, increment: u8) -> Result<u8>;
 }
 
 pub type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
@@ -83,8 +86,12 @@ impl Actions for ActionsMap {
         self[action].get()
     }
 
-    fn get_mut(&mut self, action: Action) -> &mut ActionValue {
-        &mut self[action]
+    fn set(&mut self, action: Action, value: u8) -> Result<u8> {
+        self[action].set(value).map_err(ActionError::from)
+    }
+
+    fn increment(&mut self, action: Action, increment: u8) -> Result<u8> {
+        self[action].increment(increment).map_err(ActionError::from)
     }
 }
 
@@ -132,7 +139,7 @@ mod tests {
         ) {
             let mut actions = ActionsMap::default();
 
-            actions.get_mut(action).set(value).expect("should have set action rating");
+            actions.set(action, value).expect("should have set action rating");
 
             assert_eq!(value, actions.get(action));
         }
@@ -144,8 +151,8 @@ mod tests {
         ) {
             let mut actions = ActionsMap::default();
 
-            match actions.get_mut(action).set(value).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(value > 4, "Action rating clamped when it was lower than max"),
+            match actions.set(action, value).expect_err("should have clamped") {
+                ActionError::ValueError(DataError::Value(ValueError::ClampedMax)) => assert!(value > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
@@ -159,8 +166,8 @@ mod tests {
         ) {
             let mut actions = ActionsMap::default();
 
-            match actions.get_mut(action).increment(increment).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
+            match actions.increment(action, increment).expect_err("should have clamped") {
+                ActionError::ValueError(DataError::Value(ValueError::ClampedMax)) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
