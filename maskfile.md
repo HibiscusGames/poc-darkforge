@@ -11,7 +11,10 @@ Cross-platform compatible for both Linux and Windows.
 > Run all development tasks
 
 ```bash
- mask dev
+mask fmt
+mask lint
+mask check
+mask run
 ```
 
 ## fmt
@@ -247,4 +250,12 @@ else
         cross build ${args[@]} ${target}
     done
 fi
+```
+
+## run
+
+> Run the project with the root command
+
+```bash
+cargo run --bin dfplay
 ```
