@@ -9,18 +9,20 @@
 pub mod effect;
 pub mod position;
 
-use std::ops::{Deref, DerefMut};
+use std::{
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
 
 use enum_map::{Enum, EnumMap};
 use thiserror::Error;
 
 pub use crate::action::{effect::Effect, position::Position};
-use crate::data::UnsignedInteger;
+use crate::data::{UnsignedInteger, Value};
 
 const ACTION_MAX: usize = 4;
 
 #[derive(Error, Debug, PartialEq)]
-/// Error type for action rolls
 pub enum ActionError {
     #[error("cannot decrease position below {0:?}")]
     PositionClampedLow(Position),
@@ -64,14 +66,29 @@ pub enum Action {
     Sway,
 }
 
+pub trait Actions: Debug + Default + PartialEq {
+    fn get(&self, action: Action) -> u8;
+    fn get_mut(&mut self, action: Action) -> &mut ActionValue;
+}
+
 pub type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 
 type Result<T> = std::result::Result<T, ActionError>;
 
 #[derive(Debug, Default, PartialEq)]
-pub struct Actions(EnumMap<Action, ActionValue>);
+pub struct ActionsMap(EnumMap<Action, ActionValue>);
 
-impl Deref for Actions {
+impl Actions for ActionsMap {
+    fn get(&self, action: Action) -> u8 {
+        self[action].get()
+    }
+
+    fn get_mut(&mut self, action: Action) -> &mut ActionValue {
+        &mut self[action]
+    }
+}
+
+impl Deref for ActionsMap {
     type Target = EnumMap<Action, ActionValue>;
 
     fn deref(&self) -> &Self::Target {
@@ -79,7 +96,7 @@ impl Deref for Actions {
     }
 }
 
-impl DerefMut for Actions {
+impl DerefMut for ActionsMap {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -89,11 +106,8 @@ impl DerefMut for Actions {
 mod tests {
     use proptest::prelude::*;
 
-    use crate::{
-        action::Action,
-        character::Character,
-        data::{Error as DataError, Value, value::Error as ValueError},
-    };
+    use super::*;
+    use crate::data::{Error as DataError, value::Error as ValueError};
 
     proptest!(
         #[test]
@@ -101,11 +115,11 @@ mod tests {
             action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
             value in 0u8..=4u8
         ) {
-            let mut character = Character::new("Test Character");
+            let mut actions = ActionsMap::default();
 
-            character.action_mut(action).set(value).expect("should have set action rating");
+            actions.get_mut(action).set(value).expect("should have set action rating");
 
-            assert_eq!(value, character.action(action).get());
+            assert_eq!(value, actions.get(action));
         }
 
         #[test]
@@ -113,14 +127,14 @@ mod tests {
             action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
             value in 5u8..u8::MAX
         ) {
-            let mut character = Character::new("Test Character");
+            let mut actions = ActionsMap::default();
 
-            match character.action_mut(action).set(value).expect_err("should have clamped") {
+            match actions.get_mut(action).set(value).expect_err("should have clamped") {
                 DataError::Value(ValueError::ClampedMax) => assert!(value > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
-            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
+            assert_eq!(4, actions.get(action), "Action rating should clamp precisely to MAX (4)");
         }
 
         #[test]
@@ -128,14 +142,14 @@ mod tests {
             action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
             increment in 5u8..=u8::MAX
         ) {
-            let mut character = Character::new("Test Character");
+            let mut actions = ActionsMap::default();
 
-            match character.action_mut(action).increment(increment).expect_err("should have clamped") {
+            match actions.get_mut(action).increment(increment).expect_err("should have clamped") {
                 DataError::Value(ValueError::ClampedMax) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
-            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
+            assert_eq!(4, actions.get(action), "Action rating should clamp precisely to MAX (4)");
         }
     );
 }

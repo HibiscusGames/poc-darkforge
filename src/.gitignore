@@ -1,6 +1,8 @@
+# Allow submodules
 !action
 !character
 !data
 !roll
 
+# Allow source files
 !*.rs
