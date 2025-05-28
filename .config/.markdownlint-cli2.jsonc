@@ -4,7 +4,7 @@
     "maskfile.md",
     "**/node_modules",
     "**/toolchains",
-    "**/target",
+    "**/target"
   ],
   "config": {
     "MD004": {
