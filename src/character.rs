@@ -8,16 +8,15 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    action::Actions,
-    data::{ArrayTracker, Error as DataError, Tracker, UnsignedInteger, Value},
+    action::{Action, Actions},
+    data::tracker::{ArrayTracker, Error as TrackerError, Tracker},
+    stress::{trauma::{Trauma, Traumas}, Level as StressLevel},
 };
-
-const STRESS_MAX: usize = 10;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
     #[error(transparent)]
-    DataError(#[from] DataError),
+    TrackerError(#[from] TrackerError<Harm>),
     #[error(transparent)]
     HarmTrackerError(#[from] HarmTrackerError),
 }
@@ -212,7 +211,7 @@ pub struct Character<ACT: Actions, T: Traumas> {
 pub struct Harm(HarmLevel, HarmType);
 
 /// Default implementation of a character using the recommended dependencies.
-pub type DefaultCharacter = Character<ActionsMap, SetTracker<Trauma, 4>>;
+pub type DefaultCharacter = Character<ArrayTracker<Action, 4>, ArrayTracker<Trauma, 4>>;
 
 impl Display for Harm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -384,7 +383,7 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{action::ActionsMap, data::tracker::Tracker};
+    use crate::{action::ActionsMap, data::tracker::{SetTracker, Tracker}};
 
     const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe];
 

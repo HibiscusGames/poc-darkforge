@@ -10,7 +10,7 @@
 //! # Examples
 //!
 //! ```
-//! use darkforge::data::tracker::{ArrayTracker, Tracker};
+//! use darkforge::data::tracker::{Tracker, ArrayTracker};
 //!
 //! // Create an empty tracker that can hold up to 4 integers
 //! let mut tracker = ArrayTracker::<i32, 4>::default();
