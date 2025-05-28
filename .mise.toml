@@ -1,18 +1,8 @@
 [tools]
-markdownlint-cli2 = "0.17.2"
-gh = "2.73.0"
 bun = "1.2.14"
 "go:github.com/evilmartians/lefthook" = "1.11.13"
-
-[task_config]
-includes = [
-  ".config/tasks.md.toml",
-  ".config/tasks.rs.toml",
-  ".config/tasks.ts.toml",
-  ".config/tasks.ex.toml",
-  "examples/hungry_goblins/tasks.toml",
-  "examples/orcnpie/tasks.toml",
-]
+markdownlint-cli2 = "0.18.1"
+mask = "0.11.6"
 
 [vars]
 config_dir = "{{config_root}}/.config"
@@ -25,61 +15,5 @@ description = "Bootstrap the project"
 run = """
   bun install && \
   lefthook install && \
-  cargo install cargo-xwin xwin cargo-audit
+  cargo bin -i
 """
-
-[tasks.dev]
-description = "Run all development tasks"
-run = "bacon dev"
-
-[tasks."dev:impl"]
-hide = true
-depends = ["fmt", "lint", "test"]
-
-[tasks.fmt]
-description = "Run all formatting tasks"
-depends = ["fmt:*"]
-
-[tasks.lint]
-description = "Run all linting tasks"
-depends = ["lint:*"]
-
-[tasks.fix]
-description = "Fix all linting problems"
-depends = ["fix:*"]
-
-[tasks."lint:spellcheck"]
-description = "Run spell check"
-run = "bun spellcheck"
-
-[tasks.test]
-description = "Run all tests in debug mode"
-depends = ["test:debug"]
-
-[tasks."test:debug"]
-description = "Run all tests in debug mode"
-run = "cross nextest run --all --all-features --all-targets"
-
-[tasks."test:release"]
-description = "Run all tests in release mode"
-run = "cross nextest run --all --all-features --all-targets --release"
-
-[tasks."build"]
-description = "Build all libraries in debug mode"
-depends = ["build:debug", "build:examples"]
-
-[tasks."build:debug:all"]
-description = "Build all libraries in release mode"
-depends = ["build:debug:*", "examples:debug"]
-
-[tasks."build:release:all"]
-description = "Build all libraries in release mode"
-depends = ["build:release:*", "examples:release"]
-
-[tasks."build:examples"]
-description = "Build all examples in debug mode"
-depends = ["examples:debug"]
-
-[tasks."build:examples:all"]
-description = "Build all examples"
-depends = ["examples:debug", "examples:release"]

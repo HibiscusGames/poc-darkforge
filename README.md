@@ -25,9 +25,6 @@ The goal is to validate design assumptions and explore how the tabletop mechanic
 ```bash
 # Initialize development environment
 mise bootstrap
-
-# Build the project
-cargo build
 ```
 
 ### Development Workflow

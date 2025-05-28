@@ -28,7 +28,7 @@
 - Always use test driven development for code changes. This means:
   1. If the test case has not been created by the user, propose a test case and stop for feedback
   2. If a test case has been created and is failing, propose the minimal code change that would make that test pass.
-  3. If a test case has been created and is passing, look for oportunities for refactoring the test and/or production code.
+  3. If a test case has been created and is passing, look for opportunities for refactoring the test and/or production code.
 - Commits should be atomic (change one thing at a time) and as small as possible. Warn the user before making changes if there are already changes that haven't been committed yet.
 - Run the configured project linters after each change.
 
