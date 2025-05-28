@@ -1,23 +1,17 @@
-//! Implements character mechanics including action ratings, harm, and trauma.
-//!
-//! Characters in the game have:
-//! - Attributes (Insight, Prowess, Resolve)
-//! - Action ratings (ranging from 0-4)
-//! - Harm tracking
-//! - Trauma tracking
-
+//! Implements a character sheet, including actions, harm, trauma, stress, etc.
 use std::{
     fmt::Debug,
     hash::Hash,
     ops::{Deref, DerefMut, Range},
 };
 
-use enum_map::{Enum, EnumMap};
 use thiserror::Error;
 
-use crate::data::{ArrayTracker, Error as DataError, Tracker, UnsignedInteger, Value};
+use crate::{
+    action::Actions,
+    data::{ArrayTracker, Error as DataError, Tracker, UnsignedInteger, Value},
+};
 
-const ACTION_MAX: usize = 4;
 const STRESS_MAX: usize = 10;
 
 #[derive(Debug, Error, PartialEq)]
@@ -36,37 +30,6 @@ pub enum HarmTrackerError {
     HealErrorHealthy,
     #[error("Cannot harm a character that is already dead.")]
     HarmErrorDead,
-}
-
-#[derive(Clone, Copy, Debug, Enum, PartialEq, Eq, Hash)]
-pub enum Action {
-    // Insight
-    /// When you Hunt, you carefully track a target
-    Hunt,
-    /// When you `Study`, you scrutinize details and interpret evidence.
-    Study,
-    /// When you `Survey`, you observe the situation and anticipate outcomes.
-    Survey,
-    /// When you `Tinker`, you fiddle with devices and mechanisms.
-    Tinker,
-    // Prowess
-    /// When you `Finesse`, you employ dextrous manipulation or subtle misdirection.
-    Finesse,
-    /// When you `Prowl`, you traverse skilfully and quietly.
-    Prowl,
-    /// When you `Skirmish`, you entangle a target in close combat so they can’t easily escape.
-    Skirmish,
-    /// When you `Wreck`, you unleash savage force.
-    Wreck,
-    // Resolve
-    /// When you `Attune`, you open your mind to arcane power.
-    Attune,
-    /// When you `Command`, you compel swift obedience.
-    Command,
-    /// When you `Consort`, you socialize with friends and contacts.
-    Consort,
-    /// When you `Sway`, you influence with guile, charm or argument.
-    Sway,
 }
 
 /// A trauma is a persistent emotional or psychological condition that affects a character's behaviour and outlook.
@@ -252,11 +215,11 @@ pub enum HarmType {
 /// - A trauma tracker
 /// - A harm tracker
 #[derive(Debug, PartialEq)]
-pub struct Character {
+pub struct Character<ACT: Actions> {
     /// The name of the character.
     name: String,
     /// The skill ratings for the actions the character can perform.
-    actions: Actions,
+    actions: ACT,
     /// The stress tracker for the character.
     stress: Stress,
     /// The trauma tracker for the character.
@@ -265,9 +228,6 @@ pub struct Character {
     harm: HarmTracker,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct Actions(EnumMap<Action, ActionValue>);
-type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 type Stress = UnsignedInteger<u8, 0, STRESS_MAX>;
 type Traumas = ArrayTracker<Trauma, 4>;
 
@@ -371,25 +331,25 @@ impl HarmTracker {
     }
 }
 
-impl Character {
+impl<ACT: Actions> Character<ACT> {
     pub fn new(name: &str) -> Self {
         Character {
             name: name.to_string(),
-            actions: Actions::default(),
+            actions: ACT::default(),
             stress: Stress::default(),
             traumas: Traumas::default(),
             harm: HarmTracker::default(),
         }
     }
 
-    /// Returns a reference to the skill rating for the given action.
-    pub fn action(&self, action: Action) -> &ActionValue {
-        &self.actions.deref()[action]
+    /// Returns a reference to the action ratings for the character
+    pub fn actions(&self) -> &ACT {
+        &self.actions
     }
 
-    /// Returns a mutable reference to the skill rating for the given action.
-    pub fn action_mut(&mut self, action: Action) -> &mut ActionValue {
-        &mut self.actions.deref_mut()[action]
+    /// Returns a mutable reference to the action ratings for the character.
+    pub fn actions_mut(&mut self) -> &mut ACT {
+        &mut self.actions
     }
 
     /// Returns a reference to the stress tracker for the character.
@@ -423,20 +383,6 @@ impl Character {
     }
 }
 
-impl Deref for Actions {
-    type Target = EnumMap<Action, ActionValue>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Actions {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 impl Deref for HarmTracker {
     type Target = ArrayTracker<Harm, 6>;
 
@@ -458,7 +404,10 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::data::{Tracker, value::Error as ValueError};
+    use crate::{
+        action::ActionsMap,
+        data::{Tracker, value::Error as ValueError},
+    };
 
     const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe];
 
@@ -483,52 +432,10 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_set_and_get_action_between_0_and_4(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
-            value in 0u8..=4u8
-        ) {
-            let mut character = Character::new("Test Character");
-
-            character.action_mut(action).set(value).expect("should have set action rating");
-
-            assert_eq!(value, character.action(action).get());
-        }
-
-        #[test]
-        fn test_action_ratings_above_max_are_clamped_to_max(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
-            value in 5u8..u8::MAX
-        ) {
-            let mut character = Character::new("Test Character");
-
-            match character.action_mut(action).set(value).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(value > 4, "Action rating clamped when it was lower than max"),
-                e => panic!("unexpected error: {e:?}"),
-            }
-
-            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
-        }
-
-        #[test]
-        fn test_increment_action_rating_clamps_to_max(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
-            increment in 5u8..=u8::MAX
-        ) {
-            let mut character = Character::new("Test Character");
-
-            match character.action_mut(action).increment(increment).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
-                e => panic!("unexpected error: {e:?}"),
-            }
-
-            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
-        }
-
-        #[test]
         fn test_set_and_get_stress_level_between_0_and_10(
             stress in 0u8..=10u8
         ) {
-            let mut character = Character::new("Test Character");
+            let mut character: Character<ActionsMap> = Character::new("Test Character");
 
             character.stress_mut().set(stress).expect("should have set stress level");
 
@@ -539,7 +446,7 @@ mod tests {
         fn test_setting_stress_levels_above_max_clamp_to_max(
             stress in 11u8..=u8::MAX
         ) {
-            let mut character = Character::new("Test Character");
+            let mut character: Character<ActionsMap> = Character::new("Test Character");
 
             match character.stress_mut().set(stress).expect_err("should have clamped") {
                 DataError::Value(ValueError::ClampedMax) => assert!(stress > 10, "Stress level clamped when it was lower than max"),
@@ -553,7 +460,7 @@ mod tests {
         fn test_incrementing_stress_levels_above_max_clamp_to_max(
             stress in 0u8..=10u8
         ) {
-            let mut character = Character::new("Test Character");
+            let mut character: Character<ActionsMap> = Character::new("Test Character");
             let increment = (STRESS_MAX + 1) as u8 - stress;
 
             character.stress_mut().set(stress).expect("should have set stress level");
@@ -567,7 +474,7 @@ mod tests {
 
         #[test]
         fn test_harm_is_added_to_empty_tracker(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
-            let mut character = Character::new("Test Character");
+            let mut character: Character<ActionsMap> = Character::new("Test Character");
             let got = character.harm_mut().apply(Harm(level, kind)).expect("should have added harm");
 
             let expected = Harm(level, kind);
@@ -578,7 +485,7 @@ mod tests {
 
         #[test]
         fn test_harm_is_upgraded_when_tracker_is_full_for_that_level(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
-            let mut character = Character::new("Test Character");
+            let mut character: Character<ActionsMap> = Character::new("Test Character");
             let mut expected_harm = vec![];
             for _ in level.range() {
                 let h = Harm(level, KINDS.choose(&mut rand::rng()).cloned().expect("should have selected a random harm type"));
@@ -607,7 +514,7 @@ mod tests {
         Error::HarmTrackerError(HarmTrackerError::HarmErrorDead)
     )]
     fn test_apply_harm_fails(#[case] initial_harms: Vec<Harm>, #[case] expect: Error) {
-        let mut character = Character::new("Test Character");
+        let mut character: Character<ActionsMap> = Character::new("Test Character");
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
@@ -642,7 +549,7 @@ mod tests {
         vec![]
     )]
     fn test_heal_downgrades_all_harm_and_removes_lesser_harm(#[case] initial_harms: Vec<Harm>, #[case] expected_harms: Vec<Harm>) {
-        let mut character = Character::new("Test Character");
+        let mut character: Character<ActionsMap> = Character::new("Test Character");
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
@@ -668,7 +575,7 @@ mod tests {
         HarmTrackerError::HealErrorDead
     )]
     fn test_heal_fails(#[case] init_state: Vec<Harm>, #[case] expect: HarmTrackerError) {
-        let mut character = Character::new("Test Character");
+        let mut character: Character<ActionsMap> = Character::new("Test Character");
         for harm in &init_state {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
@@ -681,7 +588,7 @@ mod tests {
 
     #[test]
     fn test_returns_false_when_checking_for_pending_trauma_given_a_character_with_a_stress_level_below_10() {
-        let mut character = Character::new("Test Character");
+        let mut character: Character<ActionsMap> = Character::new("Test Character");
         character.stress_mut().set(9).expect("should have set stress level");
 
         assert!(!character.has_pending_trauma());
@@ -689,7 +596,7 @@ mod tests {
 
     #[test]
     fn test_returns_true_when_checking_for_pending_trauma_given_a_character_with_a_stress_level_of_10() {
-        let mut character = Character::new("Test Character");
+        let mut character: Character<ActionsMap> = Character::new("Test Character");
         character.stress_mut().set(10).expect("should have set stress level");
 
         assert!(character.has_pending_trauma());
@@ -697,14 +604,14 @@ mod tests {
 
     #[test]
     fn test_new_character_has_empty_trauma_list() {
-        let character = Character::new("Test Character");
+        let character: Character<ActionsMap> = Character::new("Test Character");
 
         assert!(character.traumas().is_empty());
     }
 
     #[test]
     fn test_new_character_has_empty_harm_tracker() {
-        let character = Character::new("Test Character");
+        let character: Character<ActionsMap> = Character::new("Test Character");
 
         assert!(character.harm().is_empty());
     }
