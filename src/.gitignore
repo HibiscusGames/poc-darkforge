@@ -3,6 +3,7 @@
 !character
 !data
 !roll
+!stress
 
 # Allow source files
 !*.rs
