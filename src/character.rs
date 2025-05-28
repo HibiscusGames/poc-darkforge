@@ -8,12 +8,13 @@ use std::{
 use thiserror::Error;
 
 use crate::{
+    {
+    action::Actions,
     data::{ArrayTracker, Error as DataError, Tracker, UnsignedInteger},
     stress::{Stress, Traumas},
+},
 };
 
-const ACTION_MAX: usize = 4;
-const STRESS_MAX: usize = 10;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
@@ -31,37 +32,6 @@ pub enum HarmTrackerError {
     HealErrorHealthy,
     #[error("Cannot harm a character that is already dead.")]
     HarmErrorDead,
-}
-
-#[derive(Clone, Copy, Debug, Enum, PartialEq, Eq, Hash)]
-pub enum Action {
-    // Insight
-    /// When you Hunt, you carefully track a target
-    Hunt,
-    /// When you `Study`, you scrutinize details and interpret evidence.
-    Study,
-    /// When you `Survey`, you observe the situation and anticipate outcomes.
-    Survey,
-    /// When you `Tinker`, you fiddle with devices and mechanisms.
-    Tinker,
-    // Prowess
-    /// When you `Finesse`, you employ dextrous manipulation or subtle misdirection.
-    Finesse,
-    /// When you `Prowl`, you traverse skilfully and quietly.
-    Prowl,
-    /// When you `Skirmish`, you entangle a target in close combat so they can’t easily escape.
-    Skirmish,
-    /// When you `Wreck`, you unleash savage force.
-    Wreck,
-    // Resolve
-    /// When you `Attune`, you open your mind to arcane power.
-    Attune,
-    /// When you `Command`, you compel swift obedience.
-    Command,
-    /// When you `Consort`, you socialize with friends and contacts.
-    Consort,
-    /// When you `Sway`, you influence with guile, charm or argument.
-    Sway,
 }
 
 /// Represents physical injuries a character can sustain during play.
@@ -237,9 +207,6 @@ pub struct Character<ACT: Actions> {
     harm: HarmTracker,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct Actions(EnumMap<Action, ActionValue>);
-type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
 /// A specific instance of harm, including the level and type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Harm(HarmLevel, HarmType);
@@ -385,25 +352,6 @@ impl<ACT: Actions> Character<ACT> {
     fn harm_mut(&mut self) -> &mut HarmTracker {
         &mut self.harm
     }
-
-    /// Returns true if the character has pending trauma (stress level at maximum)
-    pub fn has_pending_trauma(&self) -> bool {
-        self.stress.get() >= STRESS_MAX as u8
-    }
-}
-
-impl Deref for Actions {
-    type Target = EnumMap<Action, ActionValue>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Actions {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
 }
 
 impl Deref for HarmTracker {
@@ -427,7 +375,7 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::data::{Tracker, Value, value::Error as ValueError};
+    use crate::{action::ActionsMap, data::Tracker};
 
     const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe];
 
@@ -451,48 +399,6 @@ mod tests {
     ];
 
     proptest! {
-        #[test]
-        fn test_set_and_get_action_between_0_and_4(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
-            value in 0u8..=4u8
-        ) {
-            let mut character = Character::new("Test Character");
-
-            character.action_mut(action).set(value).expect("should have set action rating");
-
-            assert_eq!(value, character.action(action).get());
-        }
-
-        #[test]
-        fn test_action_ratings_above_max_are_clamped_to_max(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
-            value in 5u8..u8::MAX
-        ) {
-            let mut character = Character::new("Test Character");
-
-            match character.action_mut(action).set(value).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(value > 4, "Action rating clamped when it was lower than max"),
-                e => panic!("unexpected error: {e:?}"),
-            }
-
-            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
-        }
-
-        #[test]
-        fn test_increment_action_rating_clamps_to_max(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
-            increment in 5u8..=u8::MAX
-        ) {
-            let mut character = Character::new("Test Character");
-
-            match character.action_mut(action).increment(increment).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
-                e => panic!("unexpected error: {e:?}"),
-            }
-
-            assert_eq!(4, character.action(action).get(), "Action rating should clamp precisely to MAX (4)");
-        }
-
         #[test]
         fn test_harm_is_added_to_empty_tracker(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
             let mut character: Character<ActionsMap> = Character::new("Test Character");
