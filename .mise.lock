@@ -5,10 +5,6 @@ backend = "core:bun"
 [tools.bun.checksums]
 "bun-linux-x64-baseline.zip" = "sha256:8590c16b934317401b69eae06109d36c399d64b041386b892f39bf75969abe12"
 
-[tools.cargo-binstall]
-version = "1.12.5"
-backend = "aqua:cargo-bins/cargo-binstall"
-
 [tools."go:github.com/evilmartians/lefthook"]
 version = "1.11.13"
 backend = "go:github.com/evilmartians/lefthook"
