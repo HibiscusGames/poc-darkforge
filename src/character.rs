@@ -8,13 +8,19 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    action::{Actions, ActionsMap},
-    data::tracker::{ArrayTracker, Error as TrackerError, SetTracker, Tracker},
-    stress::{
-        Level as StressLevel,
-        trauma::{Trauma, Traumas},
-    },
+    action::Actions,
+    data::{ArrayTracker, Error as DataError, Tracker, UnsignedInteger, Value},
 };
+
+const STRESS_MAX: usize = 10;
+
+#[derive(Debug, Error, PartialEq)]
+pub enum Error {
+    #[error(transparent)]
+    DataError(#[from] DataError),
+    #[error(transparent)]
+    HarmTrackerError(#[from] HarmTrackerError),
+}
 
 #[derive(Debug, Error, PartialEq)]
 pub enum HarmTrackerError {
