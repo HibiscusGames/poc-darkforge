@@ -109,10 +109,25 @@ mod tests {
     use super::*;
     use crate::data::{Error as DataError, value::Error as ValueError};
 
+    const ALL_ACTIONS: &[Action] = &[
+        Action::Hunt,
+        Action::Study,
+        Action::Survey,
+        Action::Tinker,
+        Action::Finesse,
+        Action::Prowl,
+        Action::Skirmish,
+        Action::Wreck,
+        Action::Attune,
+        Action::Command,
+        Action::Consort,
+        Action::Sway,
+    ];
+
     proptest!(
         #[test]
         fn test_set_and_get_action_between_0_and_4(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
+            action in prop::sample::select(ALL_ACTIONS),
             value in 0u8..=4u8
         ) {
             let mut actions = ActionsMap::default();
@@ -124,7 +139,7 @@ mod tests {
 
         #[test]
         fn test_action_ratings_above_max_are_clamped_to_max(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
+            action in prop::sample::select(ALL_ACTIONS),
             value in 5u8..u8::MAX
         ) {
             let mut actions = ActionsMap::default();
@@ -139,7 +154,7 @@ mod tests {
 
         #[test]
         fn test_increment_action_rating_clamps_to_max(
-            action in prop::sample::select(vec![Action::Hunt, Action::Study, Action::Survey, Action::Tinker, Action::Finesse, Action::Prowl, Action::Skirmish, Action::Wreck, Action::Attune, Action::Command, Action::Consort, Action::Sway]),
+            action in prop::sample::select(ALL_ACTIONS),
             increment in 5u8..=u8::MAX
         ) {
             let mut actions = ActionsMap::default();
