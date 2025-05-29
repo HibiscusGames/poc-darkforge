@@ -1,6 +1,4 @@
-use std::ops::{Deref, DerefMut};
-
-use crate::data::{ArrayTracker, UnsignedInteger, Value};
+use crate::data::{ArrayTracker, Result, UnsignedInteger, Value};
 
 const STRESS_MAX: usize = 10;
 
@@ -39,17 +37,21 @@ impl Stress {
     }
 }
 
-impl Deref for Stress {
-    type Target = UnsignedInteger<u8, 0, STRESS_MAX>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl Value<u8> for Stress {
+    fn get(&self) -> u8 {
+        self.0.get()
     }
-}
 
-impl DerefMut for Stress {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    fn set(&mut self, value: u8) -> Result<u8> {
+        self.0.set(value)
+    }
+
+    fn increment(&mut self, increment: u8) -> Result<u8> {
+        self.0.increment(increment)
+    }
+
+    fn decrement(&mut self, decrement: u8) -> Result<u8> {
+        self.0.decrement(decrement)
     }
 }
 
