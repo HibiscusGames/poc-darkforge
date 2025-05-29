@@ -8,7 +8,9 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    action::Actions, data::{ArrayTracker, Error as DataError, Tracker}, stress::{Stress, Traumas}
+    action::Actions,
+    data::{ArrayTracker, Error as DataError, Tracker},
+    stress::{Stress, Traumas},
 };
 
 #[derive(Debug, Error, PartialEq)]

@@ -16,7 +16,7 @@ pub enum Error {
     Tracker(#[from] tracker::Error),
 }
 
-type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Defines the core operations for tracking a collection of items with a fixed capacity.
 ///
