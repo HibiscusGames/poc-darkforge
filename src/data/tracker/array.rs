@@ -1,49 +1,9 @@
-//! Provides generic tracking capabilities for fixed-size collections of items.
-//!
-//! The tracker module offers a flexible way to manage collections of items with a fixed maximum capacity.
-//! This is particularly useful for game mechanics that track a limited number of effects, such as:
-//! - Character traumas (psychological conditions)
-//! - Character harm levels (physical injuries)
-//! - Limited inventory slots
-//! - Status effects with a maximum count
-//!
-//! # Examples
-//!
-//! ```
-//! use darkforge::data::tracker::{ArrayTracker, Tracker};
-//!
-//! // Create an empty tracker that can hold up to 4 integers
-//! let mut tracker = ArrayTracker::<i32, 4>::default();
-//! assert!(tracker.is_empty());
-//!
-//! // Add some items
-//! tracker.append(42);
-//! tracker.append(7);
-//! assert_eq!(2, tracker.count());
-//!
-//! // Get all items as a vector
-//! assert_eq!(vec![42, 7], tracker.list());
-//! ```
-//!
-//! # Design
-//!
-//! The module is built around the `Tracker` trait, which defines the core operations for any tracker
-//! implementation. The primary implementation is `ArrayTracker`, which uses a fixed-size array to
-//! store items efficiently.
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
-use thiserror::Error;
-
-use super::{Result, Tracker};
-
-/// Errors that can occur when working with trackers.
-#[derive(Error, Debug, PartialEq)]
-pub enum Error {
-    /// Attempted to create a tracker with more items than its capacity.
-    ///
-    /// Contains the capacity and the number of items that was attempted to be added.
-    #[error("Too many items: capacity is {0} but length would become {1}")]
-    TooManyItems(usize, usize),
-}
+use super::{Error, Tracker};
 
 /// An implementation of `Tracker` that uses a fixed-size array to store items.
 ///
@@ -59,12 +19,12 @@ pub enum Error {
 /// * `T` - The type of items being tracked. Must implement `Clone` and `Eq`.
 /// * `N` - The maximum capacity of the tracker (const generic parameter).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ArrayTracker<T: Clone + Eq, const N: usize> {
+pub struct ArrayTracker<T: Clone + Debug + Display + Eq, const N: usize> {
     /// The internal storage for items, using `Option<T>` to represent presence/absence.
     inner: [Option<T>; N],
 }
 
-impl<T: Clone + Eq, const N: usize> ArrayTracker<T, N> {
+impl<T: Clone + Debug + Display + Eq, const N: usize> ArrayTracker<T, N> {
     /// Creates a new `ArrayTracker` initialized with the given items.
     ///
     /// # Arguments
@@ -85,9 +45,9 @@ impl<T: Clone + Eq, const N: usize> ArrayTracker<T, N> {
     /// let tracker = ArrayTracker::<i32, 4>::new(&[Some(1), Some(2), None, Some(4)]).unwrap();
     /// assert_eq!(3, tracker.count());
     /// ```
-    pub fn new(input: &[Option<T>]) -> Result<Self> {
+    pub fn new(input: &[Option<T>]) -> Result<Self, Error<T>> {
         if input.len() > N {
-            return Err(Error::TooManyItems(N, input.len()).into());
+            return Err(Error::TooManyItems(N, input.len()));
         }
 
         let mut inner = [const { None }; N];
@@ -99,16 +59,16 @@ impl<T: Clone + Eq, const N: usize> ArrayTracker<T, N> {
     }
 }
 
-impl<T: Clone + Eq, const N: usize> Default for ArrayTracker<T, N> {
+impl<T: Clone + Debug + Display + Eq, const N: usize> Default for ArrayTracker<T, N> {
     fn default() -> Self {
         Self::new(&[]).unwrap()
     }
 }
 
-impl<T: Clone + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
-    fn append(&mut self, value: T) -> Result<()> {
+impl<T: Clone + Debug + Display + Eq, const N: usize> Tracker<T> for ArrayTracker<T, N> {
+    fn append(&mut self, value: T) -> Result<(), Error<T>> {
         if self.is_full() {
-            return Err(Error::TooManyItems(N, self.count() + 1).into());
+            return Err(Error::TooManyItems(N, self.count() + 1));
         }
 
         for slot in &mut self.inner {

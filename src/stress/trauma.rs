@@ -1,4 +1,6 @@
-use crate::data::ArrayTracker;
+use std::fmt::Display;
+
+use crate::data::tracker::ArrayTracker;
 
 /// A trauma is a persistent emotional or psychological condition that affects a character's behaviour and outlook.
 /// It is gained as a consequence of maxing out the stress meter during a heist.
@@ -21,6 +23,12 @@ pub enum Trauma {
     Unstable,
     /// You seek out opportunities to hurt people, even for no good reason.
     Vicious,
+}
+
+impl Display for Trauma {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub type Traumas = ArrayTracker<Trauma, 4>;
