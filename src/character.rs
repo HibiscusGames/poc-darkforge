@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::{
     action::Actions,
     data::tracker::{ArrayTracker, Error as TrackerError, Tracker},
-    stress::{Stress, Traumas},
+    stress::{Level as StressLevel, trauma::Traumas},
 };
 
 #[derive(Debug, Error, PartialEq)]
@@ -21,7 +21,7 @@ pub enum HarmTrackerError {
     HealErrorHealthy,
     #[error("Cannot harm a character that is already dead.")]
     HarmErrorDead,
-    #[error("Tracker error: {0}")]
+    #[error(transparent)]
     TrackerError(#[from] TrackerError<Harm>),
 }
 
@@ -191,7 +191,7 @@ pub struct Character<ACT: Actions> {
     /// The skill ratings for the actions the character can perform.
     actions: ACT,
     /// The stress tracker for the character.
-    stress: Stress,
+    stress: StressLevel,
     /// The trauma tracker for the character.
     traumas: Traumas,
     /// The harm tracker for the character.
@@ -255,7 +255,7 @@ impl HarmTracker {
     /// if an upgrade occurred.
     pub fn apply(&mut self, harm: Harm) -> Result<Harm, HarmTrackerError> {
         let Harm(level, kind) = harm;
-        let level_count = self.list().into_iter().filter(|h| h.0 == level).count();
+        let level_count = self.0.list().into_iter().filter(|h| h.0 == level).count();
         let level_capacity = match level {
             HarmLevel::Lesser => 2,
             HarmLevel::Moderate => 2,
@@ -268,7 +268,7 @@ impl HarmTracker {
         } else if level_count >= level_capacity {
             self.apply(Harm(level.up(), kind))
         } else {
-            self.append(harm).map_err(HarmTrackerError::TrackerError)?;
+            self.0.append(harm).map_err(HarmTrackerError::TrackerError)?;
             Ok(harm)
         }
     }
@@ -278,7 +278,7 @@ impl HarmTracker {
     /// Lesser harm is completely removed, while higher level harm is downgraded.
     /// Returns the number of harm items that were downgraded or removed.
     pub fn heal(&mut self) -> Result<(), HarmTrackerError> {
-        if self.is_empty() {
+        if self.0.is_empty() {
             return Err(HarmTrackerError::HealErrorHealthy);
         }
         if self.is_dead() {
@@ -309,7 +309,7 @@ impl<ACT: Actions> Character<ACT> {
         Character {
             name: name.to_string(),
             actions: ACT::default(),
-            stress: Stress::default(),
+            stress: StressLevel::default(),
             traumas: Traumas::default(),
             harm: HarmTracker::default(),
         }
@@ -326,12 +326,12 @@ impl<ACT: Actions> Character<ACT> {
     }
 
     /// Returns a reference to the stress tracker for the character.
-    pub fn stress(&self) -> &Stress {
+    pub fn stress(&self) -> &StressLevel {
         &self.stress
     }
 
     /// Returns a mutable reference to the stress tracker for the character.
-    pub fn stress_mut(&mut self) -> &mut Stress {
+    pub fn stress_mut(&mut self) -> &mut StressLevel {
         &mut self.stress
     }
 
@@ -443,13 +443,12 @@ mod tests {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
 
-        match character
+        let got = character
             .harm_mut()
             .apply(Harm(HarmLevel::Fatal, HarmType::Blunt))
-            .expect_err("should have failed to add harm")
-        {
-            e => assert_eq!(e, expect),
-        }
+            .expect_err("should have failed to add harm");
+
+        assert_eq!(got, expect);
     }
 
     #[rstest]
@@ -505,6 +504,7 @@ mod tests {
         }
 
         let got = character.harm_mut().heal().expect_err("should have failed to heal");
+
         assert_eq!(got, expect);
     }
 }
