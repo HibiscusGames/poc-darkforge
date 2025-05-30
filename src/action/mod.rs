@@ -87,11 +87,11 @@ impl Actions for ActionsMap {
     }
 
     fn set(&mut self, action: Action, value: u8) -> Result<u8> {
-        self[action].set(value).map_err(ActionError::from)
+        self[action].set(value).map_err(ActionError::ValueError)
     }
 
     fn increment(&mut self, action: Action, increment: u8) -> Result<u8> {
-        self[action].increment(increment).map_err(ActionError::from)
+        self[action].increment(increment).map_err(ActionError::ValueError)
     }
 }
 
