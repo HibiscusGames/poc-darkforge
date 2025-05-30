@@ -515,7 +515,6 @@ mod tests {
         }
 
         let got = character.harm_mut().heal().expect_err("should have failed to heal");
-
         assert_eq!(got, expect);
     }
 }
