@@ -25,17 +25,17 @@ pub enum Error {
 pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Hash {
     /// Increments the action value by the specified amount.
     ///
-    /// Returns `Err(ValueError::Max)` if the action value is already at the maximum.
+    /// Returns `Err(ValueError::Max)` if the action value would go beyond the bounds.
     fn increment(&mut self, amount: I) -> Result<I>;
 
     /// Decrements the action value by the specified amount.
     ///
-    /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
+    /// Returns `Err(ValueError::Min)` if the action value would go beyond the bounds.
     fn decrement(&mut self, amount: I) -> Result<I>;
 
     /// Sets the action value to the specified amount.
     ///
-    /// Returns `Err(ValueError::Max)` if the action value is already at the maximum.
+    /// Returns `Err(ValueError::Max)` if the action value would go beyond the bounds.
     /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
     fn set(&mut self, amount: I) -> Result<I>;
 
@@ -153,25 +153,31 @@ impl<I: PrimInt + Hash + Debug> Integer<I> {
 
 impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
     fn increment(&mut self, amount: I) -> Result<I> {
-        let target = self.get().saturating_add(amount);
-        if target >= self.max {
-            self.set(self.max).unwrap();
+        if self.current == self.max {
             return Err(Error::ClampedMax);
         }
 
-        self.set(target).unwrap();
-        Ok(target)
+        let target = self.current.saturating_add(amount);
+        if target > self.max {
+            self.set(self.max)?;
+            return Err(Error::ClampedMax);
+        }
+
+        self.set(target)
     }
 
     fn decrement(&mut self, amount: I) -> Result<I> {
-        let target = self.get().saturating_sub(amount);
-        if target <= self.min {
-            self.set(self.min).unwrap();
+        if self.current == self.min {
             return Err(Error::ClampedMin);
         }
 
-        self.current = target;
-        Ok(target)
+        let target = self.current.saturating_sub(amount);
+        if target < self.min {
+            self.set(self.min)?;
+            return Err(Error::ClampedMin);
+        }
+
+        self.set(target)
     }
 
     fn set(&mut self, amount: I) -> Result<I> {
