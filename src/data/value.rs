@@ -1,12 +1,9 @@
-use std::{
-    any::type_name,
-    fmt::Debug,
-    hash::Hash,
-    ops::{Deref, DerefMut},
-};
+use std::{any::type_name, fmt::Debug, hash::Hash};
 
 use num_traits::{PrimInt, Signed, Unsigned};
 use thiserror::Error;
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
@@ -24,10 +21,25 @@ pub enum Error {
     InvalidBounds(String, String),
 }
 
-pub trait Value<I: PrimInt + Hash> {
-    fn increment(&mut self, amount: I) -> Result<I, Error>;
-    fn decrement(&mut self, amount: I) -> Result<I, Error>;
-    fn set(&mut self, amount: I) -> Result<I, Error>;
+/// A value that can be incremented and decremented and is clamped to a range.
+pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Hash {
+    /// Increments the action value by the specified amount.
+    ///
+    /// Returns `Err(ValueError::Max)` if the action value is already at the maximum.
+    fn increment(&mut self, amount: I) -> Result<I>;
+
+    /// Decrements the action value by the specified amount.
+    ///
+    /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
+    fn decrement(&mut self, amount: I) -> Result<I>;
+
+    /// Sets the action value to the specified amount.
+    ///
+    /// Returns `Err(ValueError::Max)` if the action value is already at the maximum.
+    /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
+    fn set(&mut self, amount: I) -> Result<I>;
+
+    /// Returns the current action value.
     fn get(&self) -> I;
 }
 
@@ -48,7 +60,7 @@ pub struct Integer<I: PrimInt + Hash> {
 }
 
 impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    pub fn new(min: I, max: I, current: I) -> Result<Self, Error> {
+    pub fn new(min: I, max: I, current: I) -> Result<Self> {
         assert!(
             DEFAULT_MIN <= DEFAULT_MAX,
             "DEFAULT_MIN ({DEFAULT_MIN}) must be <= DEFAULT_MAX ({DEFAULT_MAX})"
@@ -68,26 +80,28 @@ impl<I: PrimInt + Unsigned + Hash + Debug + Default, const DEFAULT_MIN: usize, c
     }
 }
 
-impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Deref
+impl<I: PrimInt + Hash + Debug + Default + Unsigned, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Value<I>
     for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
 {
-    type Target = Integer<I>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    fn increment(&mut self, amount: I) -> Result<I> {
+        self.0.increment(amount)
     }
-}
 
-impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> DerefMut
-    for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    fn decrement(&mut self, amount: I) -> Result<I> {
+        self.0.decrement(amount)
+    }
+
+    fn set(&mut self, amount: I) -> Result<I> {
+        self.0.set(amount)
+    }
+
+    fn get(&self) -> I {
+        self.0.get()
     }
 }
 
 impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    pub fn new(min: I, max: I, current: I) -> Result<Self, Error> {
+    pub fn new(min: I, max: I, current: I) -> Result<Self> {
         assert!(DEFAULT_MIN <= DEFAULT_MAX, "DEFAULT_MIN must be <= DEFAULT_MAX");
         Ok(Self(Integer::new(min, max, current)?))
     }
@@ -104,22 +118,28 @@ impl<I: PrimInt + Signed + Hash + Debug + Default, const DEFAULT_MIN: isize, con
     }
 }
 
-impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Deref for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    type Target = Integer<I>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl<I: PrimInt + Hash + Debug + Default + Signed, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Value<I>
+    for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
+{
+    fn increment(&mut self, amount: I) -> Result<I> {
+        self.0.increment(amount)
     }
-}
 
-impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> DerefMut for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    fn decrement(&mut self, amount: I) -> Result<I> {
+        self.0.decrement(amount)
+    }
+
+    fn set(&mut self, amount: I) -> Result<I> {
+        self.0.set(amount)
+    }
+
+    fn get(&self) -> I {
+        self.0.get()
     }
 }
 
 impl<I: PrimInt + Hash + Debug> Integer<I> {
-    pub fn new(min: I, max: I, current: I) -> Result<Self, Error> {
+    pub fn new(min: I, max: I, current: I) -> Result<Self> {
         if min > max {
             return Err(Error::InvalidBounds(format!("{:?}", min), format!("{:?}", max)));
         }
@@ -132,21 +152,21 @@ impl<I: PrimInt + Hash + Debug> Integer<I> {
 }
 
 impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
-    fn increment(&mut self, amount: I) -> Result<I, Error> {
+    fn increment(&mut self, amount: I) -> Result<I> {
         let target = self.get().saturating_add(amount);
         if target >= self.max {
-            self.current = self.max;
+            self.set(self.max).unwrap();
             return Err(Error::ClampedMax);
         }
 
-        self.current = target;
+        self.set(target).unwrap();
         Ok(target)
     }
 
-    fn decrement(&mut self, amount: I) -> Result<I, Error> {
+    fn decrement(&mut self, amount: I) -> Result<I> {
         let target = self.get().saturating_sub(amount);
         if target <= self.min {
-            self.current = self.min;
+            self.set(self.min).unwrap();
             return Err(Error::ClampedMin);
         }
 
@@ -154,7 +174,7 @@ impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
         Ok(target)
     }
 
-    fn set(&mut self, amount: I) -> Result<I, Error> {
+    fn set(&mut self, amount: I) -> Result<I> {
         if amount < self.min {
             self.current = self.min;
             return Err(Error::ClampedMin);
