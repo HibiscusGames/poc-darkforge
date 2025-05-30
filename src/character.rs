@@ -1,6 +1,6 @@
 //! Implements a character sheet, including actions, harm, trauma, stress, etc.
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display},
     hash::Hash,
     ops::{Deref, DerefMut, Range},
 };
@@ -9,17 +9,9 @@ use thiserror::Error;
 
 use crate::{
     action::Actions,
-    data::{ArrayTracker, Error as DataError, Tracker},
+    data::tracker::{ArrayTracker, Error as TrackerError, Tracker},
     stress::{Stress, Traumas},
 };
-
-#[derive(Debug, Error, PartialEq)]
-pub enum Error {
-    #[error(transparent)]
-    DataError(#[from] DataError),
-    #[error(transparent)]
-    HarmTrackerError(#[from] HarmTrackerError),
-}
 
 #[derive(Debug, Error, PartialEq)]
 pub enum HarmTrackerError {
@@ -29,6 +21,8 @@ pub enum HarmTrackerError {
     HealErrorHealthy,
     #[error("Cannot harm a character that is already dead.")]
     HarmErrorDead,
+    #[error("Tracker error: {0}")]
+    TrackerError(#[from] TrackerError<Harm>),
 }
 
 /// Represents physical injuries a character can sustain during play.
@@ -208,6 +202,12 @@ pub struct Character<ACT: Actions> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Harm(HarmLevel, HarmType);
 
+impl Display for Harm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}: {:?}", self.0, self.1)
+    }
+}
+
 /// A specialized tracker for character harm that follows the game's rules for harm slots.
 ///
 /// The tracker has 6 slots with specific allocations:
@@ -253,7 +253,7 @@ impl HarmTracker {
     /// If the slots for the given harm level are full, the harm is upgraded to the next level.
     /// Returns the actual harm that was applied, which may be different from the input harm
     /// if an upgrade occurred.
-    pub fn apply(&mut self, harm: Harm) -> Result<Harm, Error> {
+    pub fn apply(&mut self, harm: Harm) -> Result<Harm, HarmTrackerError> {
         let Harm(level, kind) = harm;
         let level_count = self.list().into_iter().filter(|h| h.0 == level).count();
         let level_capacity = match level {
@@ -264,11 +264,11 @@ impl HarmTracker {
         };
 
         if level_count >= level_capacity && level == HarmLevel::Fatal {
-            Err(Error::HarmTrackerError(HarmTrackerError::HarmErrorDead))
+            Err(HarmTrackerError::HarmErrorDead)
         } else if level_count >= level_capacity {
             self.apply(Harm(level.up(), kind))
         } else {
-            self.append(harm)?;
+            self.append(harm).map_err(HarmTrackerError::TrackerError)?;
             Ok(harm)
         }
     }
@@ -277,12 +277,12 @@ impl HarmTracker {
     ///
     /// Lesser harm is completely removed, while higher level harm is downgraded.
     /// Returns the number of harm items that were downgraded or removed.
-    pub fn heal(&mut self) -> Result<(), Error> {
+    pub fn heal(&mut self) -> Result<(), HarmTrackerError> {
         if self.is_empty() {
-            return Err(Error::HarmTrackerError(HarmTrackerError::HealErrorHealthy));
+            return Err(HarmTrackerError::HealErrorHealthy);
         }
         if self.is_dead() {
-            return Err(Error::HarmTrackerError(HarmTrackerError::HealErrorDead));
+            return Err(HarmTrackerError::HealErrorDead);
         }
 
         let mut new_tracker = ArrayTracker::<Harm, 6>::default();
@@ -372,7 +372,7 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{action::ActionsMap, data::Tracker};
+    use crate::{action::ActionsMap, data::tracker::Tracker};
 
     const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe];
 
@@ -431,13 +431,13 @@ mod tests {
     #[rstest]
     #[case::tracker_full(
         vec![Harm(HarmLevel::Severe, HarmType::Blunt), Harm(HarmLevel::Moderate, HarmType::Piercing), Harm(HarmLevel::Moderate, HarmType::Slashing), Harm(HarmLevel::Lesser, HarmType::Fatigue), Harm(HarmLevel::Lesser, HarmType::Hunger), Harm(HarmLevel::Fatal, HarmType::Blunt)],
-        Error::HarmTrackerError(HarmTrackerError::HarmErrorDead)
+        HarmTrackerError::HarmErrorDead
     )]
     #[case::tracker_has_fatal_harm(
         vec![Harm(HarmLevel::Fatal, HarmType::Blunt)],
-        Error::HarmTrackerError(HarmTrackerError::HarmErrorDead)
+        HarmTrackerError::HarmErrorDead
     )]
-    fn test_apply_harm_fails(#[case] initial_harms: Vec<Harm>, #[case] expect: Error) {
+    fn test_apply_harm_fails(#[case] initial_harms: Vec<Harm>, #[case] expect: HarmTrackerError) {
         let mut character: Character<ActionsMap> = Character::new("Test Character");
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
@@ -504,9 +504,7 @@ mod tests {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
 
-        match character.harm_mut().heal().expect_err("should have failed to heal") {
-            Error::HarmTrackerError(got) => assert_eq!(got, expect),
-            e => panic!("unexpected error: {e:?}"),
-        }
+        let got = character.harm_mut().heal().expect_err("should have failed to heal");
+        assert_eq!(got, expect);
     }
 }

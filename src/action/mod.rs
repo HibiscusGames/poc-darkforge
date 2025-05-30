@@ -18,14 +18,14 @@ use enum_map::{Enum, EnumMap};
 use thiserror::Error;
 
 pub use crate::action::{effect::Effect, position::Position};
-use crate::data::{Error as DataError, UnsignedInteger, Value};
+use crate::data::value::{Error as ValueError, UnsignedInteger, Value};
 
 const ACTION_MAX: usize = 4;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ActionError {
     #[error(transparent)]
-    ValueError(#[from] DataError),
+    ValueError(#[from] ValueError),
     #[error("cannot decrease position below {0:?}")]
     PositionClampedLow(Position),
     #[error("cannot increase position above {0:?}")]
@@ -114,7 +114,7 @@ mod tests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::data::{Error as DataError, value::Error as ValueError};
+    use crate::data::value::Error as ValueError;
 
     const ALL_ACTIONS: &[Action] = &[
         Action::Hunt,
@@ -152,7 +152,7 @@ mod tests {
             let mut actions = ActionsMap::default();
 
             match actions.set(action, value).expect_err("should have clamped") {
-                ActionError::ValueError(DataError::Value(ValueError::ClampedMax)) => assert!(value > 4, "Action rating clamped when it was lower than max"),
+                ActionError::ValueError(ValueError::ClampedMax) => assert!(value > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
@@ -167,7 +167,7 @@ mod tests {
             let mut actions = ActionsMap::default();
 
             match actions.increment(action, increment).expect_err("should have clamped") {
-                ActionError::ValueError(DataError::Value(ValueError::ClampedMax)) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
+                ActionError::ValueError(ValueError::ClampedMax) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 

@@ -1,4 +1,4 @@
-use crate::data::{Result, UnsignedInteger, Value as ValueData};
+use crate::data::value::{Error as ValueError, UnsignedInteger, Value as ValueData};
 
 const STRESS_MAX: usize = 10;
 
@@ -17,15 +17,15 @@ impl ValueData<u8> for Value {
         self.0.get()
     }
 
-    fn set(&mut self, value: u8) -> Result<u8> {
+    fn set(&mut self, value: u8) -> Result<u8, ValueError> {
         self.0.set(value)
     }
 
-    fn increment(&mut self, increment: u8) -> Result<u8> {
+    fn increment(&mut self, increment: u8) -> Result<u8, ValueError> {
         self.0.increment(increment)
     }
 
-    fn decrement(&mut self, decrement: u8) -> Result<u8> {
+    fn decrement(&mut self, decrement: u8) -> Result<u8, ValueError> {
         self.0.decrement(decrement)
     }
 }
@@ -35,7 +35,7 @@ mod tests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::data::{Error as DataError, value::Error as ValueError};
+    use crate::data::value::Error as ValueError;
 
     proptest! {
         #[test]
@@ -56,7 +56,7 @@ mod tests {
             let mut stress = Value::default();
 
             match stress.set(stress_level).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(stress_level > STRESS_MAX as u8, "Stress level clamped when it was lower than max"),
+                ValueError::ClampedMax => assert!(stress_level > STRESS_MAX as u8, "Stress level clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}")
             }
 
@@ -72,7 +72,7 @@ mod tests {
 
             stress.set(stress_level).expect("should have set stress level");
             match stress.increment(increment).expect_err("should have clamped") {
-                DataError::Value(ValueError::ClampedMax) => assert!(stress_level + increment > STRESS_MAX as u8, "Stress level clamped when it was lower than max ({stress_level} + {increment} < {STRESS_MAX})"),
+                ValueError::ClampedMax => assert!(stress_level + increment > STRESS_MAX as u8, "Stress level clamped when it was lower than max ({stress_level} + {increment} < {STRESS_MAX})"),
                 e => panic!("unexpected error: {e:?}")
             }
 
