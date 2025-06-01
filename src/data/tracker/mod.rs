@@ -22,7 +22,7 @@
 //! assert_eq!(2, tracker.count());
 //!
 //! // Get all items as a vector
-//! assert_eq!(vec![42, 7], tracker.list());
+//! assert_eq!(vec![&42, &7], tracker.list());
 //! ```
 //!
 //! # Design
@@ -34,8 +34,10 @@ use std::fmt::{Debug, Display};
 use thiserror::Error;
 
 mod array;
+mod set;
 
 pub use array::ArrayTracker;
+pub use set::SetTracker;
 
 /// Errors that can occur when working with trackers.
 #[derive(Error, Debug, PartialEq)]
@@ -54,7 +56,7 @@ pub enum Error<T: Display> {
 ///
 /// This trait provides a common interface for different tracker implementations,
 /// allowing them to be used interchangeably in code that needs to track items.
-pub trait Tracker<T: Clone + Display + Eq> {
+pub trait Tracker<T: Clone + Display + Eq>: Clone + Default {
     /// Adds a new item to the tracker.
     ///
     /// If the tracker is already full, the item will not be added.
