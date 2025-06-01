@@ -9,7 +9,6 @@
 !roll
 !stress
 
-!stress
 
 # Allow source files
 !*.rs
