@@ -98,7 +98,7 @@ impl<T: Tracker<Trauma>> Traumas for T {
     }
 
     fn count(&self) -> usize {
-        self.count()
+        <Self as Tracker<Trauma>>::count(self)
     }
 }
 
