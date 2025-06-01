@@ -153,10 +153,6 @@ impl<I: PrimInt + Hash + Debug> Integer<I> {
 
 impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
     fn increment(&mut self, amount: I) -> Result<I> {
-        if self.current == self.max {
-            return Err(Error::ClampedMax);
-        }
-
         let target = self.current.saturating_add(amount);
         if target > self.max {
             self.set(self.max)?;
@@ -167,10 +163,6 @@ impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
     }
 
     fn decrement(&mut self, amount: I) -> Result<I> {
-        if self.current == self.min {
-            return Err(Error::ClampedMin);
-        }
-
         let target = self.current.saturating_sub(amount);
         if target < self.min {
             self.set(self.min)?;
