@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::data::tracker::{Error as TrackerError, Tracker};
+use crate::data::tracker::{Error as TrackerError, SetTracker, Tracker};
 
 /// A trauma is a persistent emotional or psychological condition that affects a character's behaviour and outlook.
 /// It is gained when maxing out the stress meter during a heist.
@@ -35,19 +35,6 @@ pub enum State {
     Broken,
 }
 
-impl Display for Trauma {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl Trauma {
-    /// Creates a new traumas tracker from a tracker implementation.
-    pub fn tracker<const N: usize>(tracker: impl Tracker<Trauma>) -> impl Traumas {
-        tracker
-    }
-}
-
 /// Represents a collection of traumas.
 pub trait Traumas: Default {
     /// Adds a new trauma to the character.
@@ -71,10 +58,9 @@ pub trait Traumas: Default {
 
     /// Returns true if the character has the specified trauma.
     fn has_trauma(&self, trauma: Trauma) -> bool;
-
-    /// Returns the number of traumas the character has.
-    fn count(&self) -> usize;
 }
+
+pub type DefaultTraumas = SetTracker<Trauma, 4>;
 
 impl<T: Tracker<Trauma>> Traumas for T {
     fn scar(&mut self, trauma: Trauma) -> Result<State, TrackerError<Trauma>> {
@@ -96,9 +82,18 @@ impl<T: Tracker<Trauma>> Traumas for T {
     fn has_trauma(&self, trauma: Trauma) -> bool {
         self.list().iter().any(|t| trauma.eq(t))
     }
+}
 
-    fn count(&self) -> usize {
-        <Self as Tracker<Trauma>>::count(self)
+impl Display for Trauma {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Trauma {
+    /// Creates a new traumas tracker from a tracker implementation.
+    pub fn tracker<const N: usize>(tracker: impl Tracker<Trauma>) -> impl Traumas {
+        tracker
     }
 }
 
@@ -110,7 +105,6 @@ mod tests {
     use proptest::{collection, prelude::*};
 
     use super::*;
-    use crate::data::tracker::SetTracker;
 
     const TRAUMAS: [Trauma; 8] = [
         Trauma::Cold,
@@ -155,28 +149,28 @@ mod tests {
 
     #[test]
     fn test_traumas_initialise_default() {
-        let traumas = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::default());
+        let traumas = DefaultTraumas::default();
 
-        assert_eq!(traumas.count(), 0, "New traumas tracker should be empty");
+        assert!(traumas.is_empty(), "New traumas tracker should be empty");
         assert!(traumas.state() == State::Fresh, "New character should not be broken");
     }
 
     proptest! {
         #[test]
         fn prop_four_traumas_means_broken(traumas in unique_traumas_vec(4)) {
-            let tracker = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::new(&traumas).unwrap());
+            let tracker = DefaultTraumas::new(&traumas).unwrap();
             prop_assert_eq!(tracker.state(), State::Broken);
         }
 
         #[test]
         fn prop_fewer_than_four_traumas_not_broken(traumas in unique_traumas_vec_range(1, 3)) {
-            let tracker = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::new(&traumas).unwrap());
+            let tracker = DefaultTraumas::new(&traumas).unwrap();
             prop_assert_eq!(tracker.state(), State::Scarred);
         }
 
         #[test]
         fn prop_cannot_exceed_capacity(traumas_base in unique_traumas_vec(5)) {
-            let mut tracker = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::new(&traumas_base[..4]).unwrap());
+            let mut tracker = DefaultTraumas::new(&traumas_base[..4]).unwrap();
 
             let extra_trauma = traumas_base[4];
             let got = tracker.scar(extra_trauma).expect_err("should have failed");
@@ -191,7 +185,7 @@ mod tests {
 
         #[test]
         fn prop_cannot_add_duplicates(traumas in unique_traumas_vec_range(1, 3)) {
-            let mut tracker = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::new(&traumas).unwrap());
+            let mut tracker = DefaultTraumas::new(&traumas).unwrap();
             let duplicate = traumas[0];
 
             let got = tracker.scar(duplicate).expect_err("should have failed");
@@ -203,21 +197,21 @@ mod tests {
 
         #[test]
         fn test_returns_true_when_has_trauma(trauma in sample::select(&TRAUMAS)){
-            let traumas = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::new(&[trauma]).unwrap());
+            let traumas = DefaultTraumas::new(&[trauma]).unwrap();
 
             prop_assert!(traumas.has_trauma(trauma), "Character should have trauma");
         }
 
         #[test]
         fn test_returns_false_when_does_not_have_trauma(traumas in unique_traumas_vec(2)){
-            let tracker = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::new(&traumas[..1]).unwrap());
+            let tracker = DefaultTraumas::new(&traumas[..1]).unwrap();
 
             prop_assert!(!tracker.has_trauma(traumas[1]), "Character should not have {:?} trauma", traumas[1]);
         }
 
         #[test]
         fn prop_count_matches_unique_traumas(traumas in unique_traumas_vec_range(0, 4)) {
-            let tracker = Trauma::tracker::<4>(SetTracker::<Trauma, 4>::new(&traumas).unwrap());
+            let tracker = DefaultTraumas::new(&traumas).unwrap();
             prop_assert_eq!(tracker.count(), traumas.len());
         }
     }

@@ -3,7 +3,7 @@ use std::{any::type_name, fmt::Debug, hash::Hash};
 use num_traits::{PrimInt, Signed, Unsigned};
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, Error>;
+type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {

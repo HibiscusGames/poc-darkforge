@@ -2,12 +2,19 @@ mod level;
 pub mod trauma;
 
 pub use level::*;
-use thiserror::Error;
+pub use trauma::{Trauma, Traumas};
 
-use crate::data::value::Error as ValueErrorReason;
+#[derive(Debug, PartialEq)]
+pub struct Tracker<L: Level, T: Traumas> {
+    stress: L,
+    traumas: T,
+}
 
-#[derive(Error, Debug, PartialEq)]
-pub enum Error {
-    #[error(transparent)]
-    ValueError(#[from] ValueErrorReason),
+impl<L: Level, T: Traumas> Default for Tracker<L, T> {
+    fn default() -> Self {
+        Self {
+            stress: Default::default(),
+            traumas: Default::default(),
+        }
+    }
 }
