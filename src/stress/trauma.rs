@@ -90,13 +90,6 @@ impl Display for Trauma {
     }
 }
 
-impl Trauma {
-    /// Creates a new traumas tracker from a tracker implementation.
-    pub fn tracker<const N: usize>(tracker: impl Tracker<Trauma>) -> impl Traumas {
-        tracker
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -118,16 +111,7 @@ mod tests {
     ];
 
     fn trauma_strategy() -> impl Strategy<Value = Trauma> {
-        prop_oneof![
-            Just(TRAUMAS[0]),
-            Just(TRAUMAS[1]),
-            Just(TRAUMAS[2]),
-            Just(TRAUMAS[3]),
-            Just(TRAUMAS[4]),
-            Just(TRAUMAS[5]),
-            Just(TRAUMAS[6]),
-            Just(TRAUMAS[7])
-        ]
+        sample::select(&TRAUMAS)
     }
 
     fn unique_traumas_vec(exact_size: usize) -> impl Strategy<Value = Vec<Trauma>> {
