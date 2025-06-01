@@ -4,7 +4,7 @@ const STRESS_MAX: usize = 10;
 
 pub trait Level: Value<u8> {
     fn has_pending_trauma(&self) -> bool {
-        self.get() >= STRESS_MAX as u8
+        self.get() == STRESS_MAX as u8
     }
 }
 
