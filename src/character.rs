@@ -2,7 +2,7 @@
 use std::{
     fmt::{Debug, Display},
     hash::Hash,
-    ops::{Deref, DerefMut, Range},
+    ops::Range,
 };
 
 use thiserror::Error;
@@ -299,7 +299,7 @@ impl HarmTracker {
         }
 
         let mut new_tracker = ArrayTracker::<Harm, 6>::default();
-        for &harm in self.list() {
+        for &harm in self.0.list() {
             let Harm(level, kind) = harm;
 
             if let Some(downgraded_level) = level.down() {
@@ -313,7 +313,7 @@ impl HarmTracker {
     }
 
     pub fn is_dead(&self) -> bool {
-        self.list().last().is_some_and(|harm| harm.0 == HarmLevel::Fatal)
+        self.0.list().last().is_some_and(|harm| harm.0 == HarmLevel::Fatal)
     }
 }
 
@@ -358,20 +358,6 @@ impl<ACT: Actions, STR: StressLevel, TRA: Traumas> Character<ACT, STR, TRA> {
     }
 }
 
-impl Deref for HarmTracker {
-    type Target = ArrayTracker<Harm, 6>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for HarmTracker {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
@@ -411,7 +397,7 @@ mod tests {
             let expected = Harm(level, kind);
 
             assert_eq!(expected, got);
-            assert_eq!(vec![expected], character.harm().list().into_iter().cloned().collect::<Vec<_>>());
+            assert_eq!(vec![expected], character.harm().0.list().into_iter().cloned().collect::<Vec<_>>());
         }
 
         #[test]
@@ -428,7 +414,7 @@ mod tests {
 
             let expected = Harm(level.up(), kind);
             expected_harm.push(expected);
-            let got_harm: Vec<Harm> = character.harm().list().into_iter().cloned().collect();
+            let got_harm: Vec<Harm> = character.harm().0.list().into_iter().cloned().collect();
 
             assert_eq!(expected, got);
             assert_eq!(expected_harm, got_harm);
@@ -483,12 +469,12 @@ mod tests {
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
-        assert_eq!(initial_harms.len(), character.harm().count());
+        assert_eq!(initial_harms.len(), character.harm().0.count());
 
         character.harm_mut().heal().expect("should have healed harm");
-        assert_eq!(expected_harms.len(), character.harm().count());
+        assert_eq!(expected_harms.len(), character.harm().0.count());
 
-        let got_harm: Vec<Harm> = character.harm().list().into_iter().cloned().collect();
+        let got_harm: Vec<Harm> = character.harm().0.list().into_iter().cloned().collect();
 
         for expected_harm in &expected_harms {
             assert!(got_harm.contains(expected_harm), "Expected harm {expected_harm:?} not found");
