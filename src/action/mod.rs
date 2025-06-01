@@ -9,23 +9,20 @@
 pub mod effect;
 pub mod position;
 
-use std::{
-    fmt::Debug,
-    ops::{Deref, DerefMut},
-};
+use std::fmt::Debug;
 
 use enum_map::{Enum, EnumMap};
 use thiserror::Error;
 
 pub use crate::action::{effect::Effect, position::Position};
-use crate::data::{Error as DataError, UnsignedInteger, Value};
+use crate::data::value::{Error as ValueError, UnsignedInteger, Value};
 
 const ACTION_MAX: usize = 4;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ActionError {
     #[error(transparent)]
-    ValueError(#[from] DataError),
+    ValueError(#[from] ValueError),
     #[error("cannot decrease position below {0:?}")]
     PositionClampedLow(Position),
     #[error("cannot increase position above {0:?}")]
@@ -74,38 +71,22 @@ pub trait Actions: Debug + Default + PartialEq {
     fn increment(&mut self, action: Action, increment: u8) -> Result<u8>;
 }
 
-pub type ActionValue = UnsignedInteger<u8, 0, ACTION_MAX>;
+pub type DefaultAction = UnsignedInteger<u8, 0, ACTION_MAX>;
+pub type DefaultActions = EnumMap<Action, DefaultAction>;
 
 type Result<T> = std::result::Result<T, ActionError>;
 
-#[derive(Debug, Default, PartialEq)]
-pub struct ActionsMap(EnumMap<Action, ActionValue>);
-
-impl Actions for ActionsMap {
+impl Actions for EnumMap<Action, DefaultAction> {
     fn get(&self, action: Action) -> u8 {
         self[action].get()
     }
 
     fn set(&mut self, action: Action, value: u8) -> Result<u8> {
-        self[action].set(value).map_err(ActionError::from)
+        self[action].set(value).map_err(ActionError::ValueError)
     }
 
     fn increment(&mut self, action: Action, increment: u8) -> Result<u8> {
-        self[action].increment(increment).map_err(ActionError::from)
-    }
-}
-
-impl Deref for ActionsMap {
-    type Target = EnumMap<Action, ActionValue>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for ActionsMap {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        self[action].increment(increment).map_err(ActionError::ValueError)
     }
 }
 
@@ -114,7 +95,7 @@ mod tests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::data::{Error as DataError, value::Error as ValueError};
+    use crate::data::value::Error as ValueError;
 
     const ALL_ACTIONS: &[Action] = &[
         Action::Hunt,
@@ -137,7 +118,7 @@ mod tests {
             action in prop::sample::select(ALL_ACTIONS),
             value in 0u8..=4u8
         ) {
-            let mut actions = ActionsMap::default();
+            let mut actions = DefaultActions::default();
 
             actions.set(action, value).expect("should have set action rating");
 
@@ -149,10 +130,10 @@ mod tests {
             action in prop::sample::select(ALL_ACTIONS),
             value in 5u8..u8::MAX
         ) {
-            let mut actions = ActionsMap::default();
+            let mut actions = DefaultActions::default();
 
             match actions.set(action, value).expect_err("should have clamped") {
-                ActionError::ValueError(DataError::Value(ValueError::ClampedMax)) => assert!(value > 4, "Action rating clamped when it was lower than max"),
+                ActionError::ValueError(ValueError::ClampedMax) => assert!(value > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 
@@ -164,10 +145,10 @@ mod tests {
             action in prop::sample::select(ALL_ACTIONS),
             increment in 5u8..=u8::MAX
         ) {
-            let mut actions = ActionsMap::default();
+            let mut actions = DefaultActions::default();
 
             match actions.increment(action, increment).expect_err("should have clamped") {
-                ActionError::ValueError(DataError::Value(ValueError::ClampedMax)) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
+                ActionError::ValueError(ValueError::ClampedMax) => assert!(increment > 4, "Action rating clamped when it was lower than max"),
                 e => panic!("unexpected error: {e:?}"),
             }
 

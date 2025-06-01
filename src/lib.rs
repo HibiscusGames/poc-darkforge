@@ -10,6 +10,8 @@ pub mod data;
 pub mod dice;
 /// Implements roll mechanics for actions and resistances, including outcome evaluation.
 pub mod roll;
+/// Implements stress and trauma mechanics for characters.
+pub mod stress;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     todo!("not implemented")

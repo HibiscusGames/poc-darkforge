@@ -1,14 +1,9 @@
-use std::{
-    any::type_name,
-    fmt::Debug,
-    hash::Hash,
-    ops::{Deref, DerefMut},
-};
+use std::{any::type_name, fmt::Debug, hash::Hash};
 
 use num_traits::{PrimInt, Signed, Unsigned};
 use thiserror::Error;
 
-use super::{Result, Value};
+type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
@@ -24,6 +19,28 @@ pub enum Error {
     /// InvalidBounds
     #[error("invalid bounds: {0} must be less than {1}")]
     InvalidBounds(String, String),
+}
+
+/// A value that can be incremented and decremented and is clamped to a range.
+pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Hash {
+    /// Increments the action value by the specified amount.
+    ///
+    /// Returns `Err(ValueError::ClampedMax)` if the action value would go beyond the bounds.
+    fn increment(&mut self, amount: I) -> Result<I>;
+
+    /// Decrements the action value by the specified amount.
+    ///
+    /// Returns `Err(ValueError::Min)` if the action value would go beyond the bounds.
+    fn decrement(&mut self, amount: I) -> Result<I>;
+
+    /// Sets the action value to the specified amount.
+    ///
+    /// Returns `Err(ValueError::ClampedMax)` if the action value would go beyond the bounds.
+    /// Returns `Err(ValueError::ClampedMin)` if the action value is already at the minimum.
+    fn set(&mut self, amount: I) -> Result<I>;
+
+    /// Returns the current action value.
+    fn get(&self) -> I;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -63,21 +80,23 @@ impl<I: PrimInt + Unsigned + Hash + Debug + Default, const DEFAULT_MIN: usize, c
     }
 }
 
-impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Deref
+impl<I: PrimInt + Hash + Debug + Default + Unsigned, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> Value<I>
     for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
 {
-    type Target = Integer<I>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    fn increment(&mut self, amount: I) -> Result<I> {
+        self.0.increment(amount)
     }
-}
 
-impl<I: PrimInt + Unsigned + Hash + Debug, const DEFAULT_MIN: usize, const DEFAULT_MAX: usize> DerefMut
-    for UnsignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    fn decrement(&mut self, amount: I) -> Result<I> {
+        self.0.decrement(amount)
+    }
+
+    fn set(&mut self, amount: I) -> Result<I> {
+        self.0.set(amount)
+    }
+
+    fn get(&self) -> I {
+        self.0.get()
     }
 }
 
@@ -99,27 +118,33 @@ impl<I: PrimInt + Signed + Hash + Debug + Default, const DEFAULT_MIN: isize, con
     }
 }
 
-impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Deref for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    type Target = Integer<I>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl<I: PrimInt + Hash + Debug + Default + Signed, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> Value<I>
+    for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX>
+{
+    fn increment(&mut self, amount: I) -> Result<I> {
+        self.0.increment(amount)
     }
-}
 
-impl<I: PrimInt + Signed + Hash + Debug, const DEFAULT_MIN: isize, const DEFAULT_MAX: isize> DerefMut for SignedInteger<I, DEFAULT_MIN, DEFAULT_MAX> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    fn decrement(&mut self, amount: I) -> Result<I> {
+        self.0.decrement(amount)
+    }
+
+    fn set(&mut self, amount: I) -> Result<I> {
+        self.0.set(amount)
+    }
+
+    fn get(&self) -> I {
+        self.0.get()
     }
 }
 
 impl<I: PrimInt + Hash + Debug> Integer<I> {
     pub fn new(min: I, max: I, current: I) -> Result<Self> {
         if min > max {
-            return Err(Error::InvalidBounds(format!("{:?}", min), format!("{:?}", max)).into());
+            return Err(Error::InvalidBounds(format!("{:?}", min), format!("{:?}", max)));
         }
         if current < min || current > max {
-            return Err(Error::OutOfBounds(format!("{:?}", current), format!("{:?}", min), format!("{:?}", max)).into());
+            return Err(Error::OutOfBounds(format!("{:?}", current), format!("{:?}", min), format!("{:?}", max)));
         }
 
         Ok(Self { min, max, current })
@@ -128,35 +153,33 @@ impl<I: PrimInt + Hash + Debug> Integer<I> {
 
 impl<I: PrimInt + Hash + Debug + Default> Value<I> for Integer<I> {
     fn increment(&mut self, amount: I) -> Result<I> {
-        let target = self.get().saturating_add(amount);
-        if target >= self.max {
-            self.current = self.max;
-            return Err(Error::ClampedMax.into());
+        let target = self.current.saturating_add(amount);
+        if target > self.max {
+            self.set(self.max)?;
+            return Err(Error::ClampedMax);
         }
 
-        self.current = target;
-        Ok(target)
+        self.set(target)
     }
 
     fn decrement(&mut self, amount: I) -> Result<I> {
-        let target = self.get().saturating_sub(amount);
-        if target <= self.min {
-            self.current = self.min;
-            return Err(Error::ClampedMin.into());
+        let target = self.current.saturating_sub(amount);
+        if target < self.min {
+            self.set(self.min)?;
+            return Err(Error::ClampedMin);
         }
 
-        self.current = target;
-        Ok(target)
+        self.set(target)
     }
 
     fn set(&mut self, amount: I) -> Result<I> {
         if amount < self.min {
             self.current = self.min;
-            return Err(Error::ClampedMin.into());
+            return Err(Error::ClampedMin);
         }
         if amount > self.max {
             self.current = self.max;
-            return Err(Error::ClampedMax.into());
+            return Err(Error::ClampedMax);
         }
 
         self.current = amount;
@@ -186,8 +209,8 @@ mod tests {
 
                             match value.set(v) {
                                 Err(e) => match e {
-                                    $crate::data::Error::Value($crate::data::value::Error::ClampedMax) => assert!(v >= 100 as $typ, "Value clamped when it was lower than max: {v} > 100"),
-                                    $crate::data::Error::Value($crate::data::value::Error::ClampedMin) => assert!(v <= 10 as $typ, "Value clamped when it was higher than min: {v} < 10"),
+                                    $crate::data::value::Error::ClampedMax => assert!(v >= 100 as $typ, "Value clamped when it was lower than max: {v} > 100"),
+                                    $crate::data::value::Error::ClampedMin => assert!(v <= 10 as $typ, "Value clamped when it was higher than min: {v} < 10"),
                                     _ => panic!("unexpected error: {}", e)
                                 },
                                 Ok(_) => {
