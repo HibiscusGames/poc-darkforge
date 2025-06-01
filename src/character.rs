@@ -8,7 +8,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    action::{Action, Actions},
+    action::{Actions, DefaultActions},
     data::tracker::{ArrayTracker, Error as TrackerError, Tracker},
     stress::{
         DefaultLevel as DefaultStressLevel, Level as StressLevel, Tracker as StressTracker,
@@ -188,13 +188,24 @@ pub enum HarmType {
 }
 
 /// A character represents a member of the crew controlled by the player.
+/// It is comprised of character descriptors (name, etc) and various gameplay trackers.
+/// The default blades in the dark implementation can be accessed via the `DefaultCharacter` convenience alias.
+/// Otherwise, the type parameters allow for customizing the character's capabilities.
 ///
-/// Characters have:
-/// - A name
-/// - A set of skill ratings for actions
-/// - A stress tracker
-/// - A trauma tracker
-/// - A harm tracker
+/// # Examples
+///
+/// ```rust
+/// use darkforge::action::{Actions, DefaultActions};
+/// use darkforge::character::{DefaultCharacter, Character};
+/// use darkforge::stress::{DefaultLevel as DefaultStressLevel, trauma::DefaultTraumas};
+///
+/// // Using the convenience type alias
+/// let character = DefaultCharacter::new("Alice");
+///
+/// // Using explicit generic parameters
+/// let character: Character<DefaultActions, DefaultStressLevel, DefaultTraumas> =
+///     Character::new("Bob");
+/// ```
 #[derive(Debug, PartialEq)]
 pub struct Character<ACT: Actions, STR: StressLevel, TRA: Traumas> {
     /// The name of the character.
@@ -213,7 +224,7 @@ pub struct Character<ACT: Actions, STR: StressLevel, TRA: Traumas> {
 pub struct Harm(HarmLevel, HarmType);
 
 /// Default implementation of a character using the recommended dependencies.
-pub type DefaultCharacter = Character<ArrayTracker<Action, 4>, DefaultStressLevel, DefaultTraumas>;
+pub type DefaultCharacter = Character<DefaultActions, DefaultStressLevel, DefaultTraumas>;
 
 impl Display for Harm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -365,7 +376,7 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{action::ActionsMap, data::tracker::Tracker};
+    use crate::data::tracker::Tracker;
 
     const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe];
 
@@ -391,7 +402,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_harm_is_added_to_empty_tracker(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
-            let mut character: Character<ActionsMap, DefaultStressLevel, DefaultTraumas> = Character::new("Test Character");
+            let mut character = DefaultCharacter::new("Test Character");
             let got = character.harm_mut().apply(Harm(level, kind)).expect("should have added harm");
 
             let expected = Harm(level, kind);
@@ -402,7 +413,7 @@ mod tests {
 
         #[test]
         fn test_harm_is_upgraded_when_tracker_is_full_for_that_level(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
-            let mut character: Character<ActionsMap, DefaultStressLevel, DefaultTraumas> = Character::new("Test Character");
+            let mut character = DefaultCharacter::new("Test Character");
             let mut expected_harm = vec![];
             for _ in level.range() {
                 let h = Harm(level, KINDS.choose(&mut rand::rng()).cloned().expect("should have selected a random harm type"));
@@ -431,7 +442,7 @@ mod tests {
         HarmTrackerError::HarmErrorDead
     )]
     fn test_apply_harm_fails(#[case] initial_harms: Vec<Harm>, #[case] expect: HarmTrackerError) {
-        let mut character: Character<ActionsMap, DefaultStressLevel, DefaultTraumas> = Character::new("Test Character");
+        let mut character = DefaultCharacter::new("Test Character");
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
@@ -465,7 +476,7 @@ mod tests {
         vec![]
     )]
     fn test_heal_downgrades_all_harm_and_removes_lesser_harm(#[case] initial_harms: Vec<Harm>, #[case] expected_harms: Vec<Harm>) {
-        let mut character: Character<ActionsMap, DefaultStressLevel, DefaultTraumas> = Character::new("Test Character");
+        let mut character = DefaultCharacter::new("Test Character");
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
@@ -491,7 +502,7 @@ mod tests {
         HarmTrackerError::HealErrorDead
     )]
     fn test_heal_fails(#[case] init_state: Vec<Harm>, #[case] expect: HarmTrackerError) {
-        let mut character: Character<ActionsMap, DefaultStressLevel, DefaultTraumas> = Character::new("Test Character");
+        let mut character = DefaultCharacter::new("Test Character");
         for harm in &init_state {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
