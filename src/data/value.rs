@@ -25,7 +25,7 @@ pub enum Error {
 pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Hash {
     /// Increments the action value by the specified amount.
     ///
-    /// Returns `Err(ValueError::Max)` if the action value would go beyond the bounds.
+    /// Returns `Err(ValueError::ClampedMax)` if the action value would go beyond the bounds.
     fn increment(&mut self, amount: I) -> Result<I>;
 
     /// Decrements the action value by the specified amount.
@@ -35,8 +35,8 @@ pub trait Value<I: PrimInt + Hash>: Default + Copy + Clone + PartialEq + Eq + Ha
 
     /// Sets the action value to the specified amount.
     ///
-    /// Returns `Err(ValueError::Max)` if the action value would go beyond the bounds.
-    /// Returns `Err(ValueError::Min)` if the action value is already at the minimum.
+    /// Returns `Err(ValueError::ClampedMax)` if the action value would go beyond the bounds.
+    /// Returns `Err(ValueError::ClampedMin)` if the action value is already at the minimum.
     fn set(&mut self, amount: I) -> Result<I>;
 
     /// Returns the current action value.

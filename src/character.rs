@@ -10,7 +10,10 @@ use thiserror::Error;
 use crate::{
     action::{Action, Actions},
     data::tracker::{ArrayTracker, Error as TrackerError, Tracker},
-    stress::{trauma::{Trauma, Traumas}, Level as StressLevel},
+    stress::{
+        Level as StressLevel,
+        trauma::{Trauma, Traumas},
+    },
 };
 
 #[derive(Debug, Error, PartialEq)]
@@ -383,7 +386,10 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{action::ActionsMap, data::tracker::{SetTracker, Tracker}};
+    use crate::{
+        action::ActionsMap,
+        data::tracker::{SetTracker, Tracker},
+    };
 
     const LEVELS: &[HarmLevel] = &[HarmLevel::Lesser, HarmLevel::Moderate, HarmLevel::Severe];
 
