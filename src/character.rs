@@ -8,9 +8,12 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    action::Actions,
-    data::tracker::{ArrayTracker, Error as TrackerError, Tracker},
-    stress::{Level as StressLevel, trauma::Traumas},
+    action::{Actions, ActionsMap},
+    data::tracker::{ArrayTracker, Error as TrackerError, SetTracker, Tracker},
+    stress::{
+        Level as StressLevel,
+        trauma::{Trauma, Traumas},
+    },
 };
 
 #[derive(Debug, Error, PartialEq)]
@@ -185,7 +188,7 @@ pub enum HarmType {
 /// - A trauma tracker
 /// - A harm tracker
 #[derive(Debug, PartialEq)]
-pub struct Character<ACT: Actions> {
+pub struct Character<ACT: Actions, T: Traumas> {
     /// The name of the character.
     name: String,
     /// The skill ratings for the actions the character can perform.
@@ -193,7 +196,7 @@ pub struct Character<ACT: Actions> {
     /// The stress tracker for the character.
     stress: StressLevel,
     /// The trauma tracker for the character.
-    traumas: Traumas,
+    traumas: T,
     /// The harm tracker for the character.
     harm: HarmTracker,
 }
@@ -201,6 +204,9 @@ pub struct Character<ACT: Actions> {
 /// A specific instance of harm, including the level and type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Harm(HarmLevel, HarmType);
+
+/// Default implementation of a character using the recommended dependencies.
+pub type DefaultCharacter = Character<ActionsMap, SetTracker<Trauma, 4>>;
 
 impl Display for Harm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -304,13 +310,13 @@ impl HarmTracker {
     }
 }
 
-impl<ACT: Actions> Character<ACT> {
+impl<ACT: Actions, T: Traumas> Character<ACT, T> {
     pub fn new(name: &str) -> Self {
         Character {
             name: name.to_string(),
             actions: ACT::default(),
             stress: StressLevel::default(),
-            traumas: Traumas::default(),
+            traumas: T::default(),
             harm: HarmTracker::default(),
         }
     }
@@ -336,7 +342,7 @@ impl<ACT: Actions> Character<ACT> {
     }
 
     /// Returns a reference to the trauma tracker for the character.
-    pub fn traumas(&self) -> &Traumas {
+    pub fn traumas(&self) -> &T {
         &self.traumas
     }
 
@@ -398,7 +404,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_harm_is_added_to_empty_tracker(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
-            let mut character: Character<ActionsMap> = Character::new("Test Character");
+            let mut character: Character<ActionsMap, SetTracker<Trauma, 4>> = Character::new("Test Character");
             let got = character.harm_mut().apply(Harm(level, kind)).expect("should have added harm");
 
             let expected = Harm(level, kind);
@@ -409,7 +415,7 @@ mod tests {
 
         #[test]
         fn test_harm_is_upgraded_when_tracker_is_full_for_that_level(level in prop::sample::select(LEVELS), kind in prop::sample::select(KINDS)) {
-            let mut character: Character<ActionsMap> = Character::new("Test Character");
+            let mut character: Character<ActionsMap, SetTracker<Trauma, 4>> = Character::new("Test Character");
             let mut expected_harm = vec![];
             for _ in level.range() {
                 let h = Harm(level, KINDS.choose(&mut rand::rng()).cloned().expect("should have selected a random harm type"));
@@ -438,7 +444,7 @@ mod tests {
         HarmTrackerError::HarmErrorDead
     )]
     fn test_apply_harm_fails(#[case] initial_harms: Vec<Harm>, #[case] expect: HarmTrackerError) {
-        let mut character: Character<ActionsMap> = Character::new("Test Character");
+        let mut character: Character<ActionsMap, SetTracker<Trauma, 4>> = Character::new("Test Character");
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
@@ -472,7 +478,7 @@ mod tests {
         vec![]
     )]
     fn test_heal_downgrades_all_harm_and_removes_lesser_harm(#[case] initial_harms: Vec<Harm>, #[case] expected_harms: Vec<Harm>) {
-        let mut character: Character<ActionsMap> = Character::new("Test Character");
+        let mut character: Character<ActionsMap, SetTracker<Trauma, 4>> = Character::new("Test Character");
         for harm in &initial_harms {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
@@ -498,7 +504,7 @@ mod tests {
         HarmTrackerError::HealErrorDead
     )]
     fn test_heal_fails(#[case] init_state: Vec<Harm>, #[case] expect: HarmTrackerError) {
-        let mut character: Character<ActionsMap> = Character::new("Test Character");
+        let mut character: Character<ActionsMap, SetTracker<Trauma, 4>> = Character::new("Test Character");
         for harm in &init_state {
             character.harm_mut().apply(*harm).expect("should have added harm");
         }
