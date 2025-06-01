@@ -1,14 +1,10 @@
 # Allow submodules
-!action
-
-!character
-
-!data
-!data/tracker
-
-!roll
-!stress
-
+!action/
+!character/
+!data/
+!data/tracker/
+!roll/
+!stress/
 
 # Allow source files
 !*.rs
