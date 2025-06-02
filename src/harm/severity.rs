@@ -33,10 +33,6 @@ impl Severity {
             Severity::Lesser => Err(Error::DecreaseOutOfBounds),
         }
     }
-
-    pub fn capacity(&self) -> usize {
-        todo!("not implemented")
-    }
 }
 
 #[cfg(test)]

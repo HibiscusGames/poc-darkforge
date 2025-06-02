@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+pub mod capacity;
 pub mod severity;
 
 #[derive(Debug, Clone, Copy, Error, Eq, PartialEq)]
