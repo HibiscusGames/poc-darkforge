@@ -8,6 +8,8 @@ pub mod character;
 pub mod data;
 /// Provides generic dice rolling functionality with support for different distributions and sorting orders.
 pub mod dice;
+/// Implements harm mechanics for characters.
+pub mod harm;
 /// Implements roll mechanics for actions and resistances, including outcome evaluation.
 pub mod roll;
 /// Implements stress and trauma mechanics for characters.
