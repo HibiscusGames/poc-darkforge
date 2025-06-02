@@ -25,8 +25,13 @@ impl Severity {
         }
     }
 
-    pub fn down(&self) -> Option<Self> {
-        todo!("not implemented")
+    pub fn down(&self) -> Result<Self> {
+        match self {
+            Severity::Fatal => Ok(Severity::Severe),
+            Severity::Severe => Ok(Severity::Moderate),
+            Severity::Moderate => Ok(Severity::Lesser),
+            Severity::Lesser => Err(Error::DecreaseOutOfBounds),
+        }
     }
 
     pub fn capacity(&self) -> usize {
@@ -47,6 +52,13 @@ mod tests {
 
             assert_eq!(got, expected);
         }
+
+        #[test]
+        fn test_severity_decrease_to_lesser((init, expected) in (sample::select(&[(Severity::Moderate, Severity::Lesser), (Severity::Severe, Severity::Moderate), (Severity::Fatal, Severity::Severe)]))) {
+            let got = init.down().expect("should have decreased severity");
+
+            assert_eq!(got, expected)
+        }
     }
 
     #[test]
@@ -54,5 +66,12 @@ mod tests {
         let got = Severity::Fatal.up().expect_err("should have failed to increase severity");
 
         assert_eq!(got, Error::IncreaseOutOfBounds);
+    }
+
+    #[test]
+    fn test_cannot_decrease_severity_below_lesser() {
+        let got = Severity::Lesser.down().expect_err("should have failed to decrease severity");
+
+        assert_eq!(got, Error::DecreaseOutOfBounds);
     }
 }
