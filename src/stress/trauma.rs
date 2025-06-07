@@ -128,7 +128,7 @@ mod tests {
     }
 
     fn unique_traumas_vec_range(min_size: usize, max_size: usize) -> impl Strategy<Value = Vec<Trauma>> {
-        (min_size..=max_size).prop_flat_map(|size| unique_traumas_vec(size))
+        (min_size..=max_size).prop_flat_map(unique_traumas_vec)
     }
 
     #[test]

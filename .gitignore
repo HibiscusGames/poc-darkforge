@@ -2,14 +2,15 @@
 *
 
 #### Allowed folders ####
-!.config
-!.cargo
-!.github
-!.windsurf
-!.tools
+!.config/
+!.cargo/
+!.github/
+!.windsurf/
+!.tools/
 
-!proptest-regressions
-!src
+!proptest-regressions/
+!src/
+!benches/
 
 ##### Allowed files #####
 !.editorconfig
