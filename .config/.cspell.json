@@ -11,12 +11,7 @@
     "**/target/**",
     "**/*.lock",
     "LICENSE",
-    "examples/**/game/libs/**/*",
-    "examples/**/game/**/*.import",
-    "examples/**/game/**/*.uid",
-    "examples/**/game/**/*.tscn",
-    "examples/**/game/**/*.tres",
-    "examples/**/game/*.godot",
+    "benches/data/compositor/composite.rs",
     "bacon.toml"
   ],
   "ignoreRegExpList": [
